@@ -1,16 +1,47 @@
-export default function Home() {
+"use client"
+
+import { useState } from "react"
+import { Map, BookOpen } from "lucide-react"
+import { MyMap } from "@/components/client/my-map"
+import { Journal } from "@/components/client/journal"
+
+export default function ClientApp() {
+  const [activeTab, setActiveTab] = useState<"map" | "journal">("map")
+
   return (
-    <div className="flex min-h-screen items-center justify-center font-sans">
-      <main className="flex w-full max-w-3xl flex-col items-center gap-8 px-6 py-16 text-center sm:items-start sm:text-left">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-4xl font-bold tracking-tight">
-            PulseTherapyApp
-          </h1>
-          <p className="max-w-md text-lg text-muted-foreground">
-            To get started, send a prompt or modify this page directly.
-          </p>
-        </div>
+    <div className="flex h-dvh flex-col bg-background">
+      {/* Main Content */}
+      <main className="flex min-h-0 flex-1 flex-col">
+        {activeTab === "map" ? <MyMap /> : <Journal />}
       </main>
+
+      {/* Bottom Tab Bar */}
+      <nav className="flex shrink-0 border-t border-[#c8eae4] bg-white" aria-label="Main navigation">
+        <button
+          onClick={() => setActiveTab("map")}
+          className={`flex flex-1 flex-col items-center gap-1 py-3 transition-colors ${
+            activeTab === "map"
+              ? "text-[#4ECDC4]"
+              : "text-[#a0a0a0]"
+          }`}
+          aria-current={activeTab === "map" ? "page" : undefined}
+        >
+          <Map className="h-6 w-6" />
+          <span className="text-xs font-bold">My Map</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("journal")}
+          className={`flex flex-1 flex-col items-center gap-1 py-3 transition-colors ${
+            activeTab === "journal"
+              ? "text-[#FF9F43]"
+              : "text-[#a0a0a0]"
+          }`}
+          aria-current={activeTab === "journal" ? "page" : undefined}
+        >
+          <BookOpen className="h-6 w-6" />
+          <span className="text-xs font-bold">Journal</span>
+        </button>
+      </nav>
     </div>
-  );
+  )
 }
