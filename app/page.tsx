@@ -8,7 +8,8 @@ import {
   Trash2, Gem, Trophy, Users, Dumbbell, ChefHat, Bell,
   MessageCircle, Send, Footprints, PersonStanding, Star,
   Music, Image, PenLine, Zap, Smile, Palette, BookOpen,
-  HandMetal, Shield, Bike, BrainCircuit, Gauge, HeartHandshake
+  HandMetal, Shield, Bike, BrainCircuit, Gauge, HeartHandshake,
+  UtensilsCrossed, Clock, Check, ArrowLeft
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -81,15 +82,39 @@ function LandscapeIcon({ id }: { id: string }) {
   }
 }
 
-/* -- Daily tasks for fuel -- */
-const dailyTasks = [
-  { id: "groceries", label: "Get Groceries" },
-  { id: "bills", label: "Pay a Bill" },
-  { id: "meal", label: "Make a Meal" },
-  { id: "bed", label: "Make Your Bed" },
-  { id: "movement", label: "Movement / Walk" },
-  { id: "health", label: "Health Appointment" },
-]
+/* -- Meal suggestions by time of day -- */
+function getMealSuggestions() {
+  const h = new Date().getHours()
+  if (h < 11)
+    return {
+      mealTime: "Breakfast",
+      suggestions: [
+        { name: "Oatmeal & Berries", desc: "Warm oats topped with fresh berries, honey, and walnuts", tag: "Quick" },
+        { name: "Eggs & Toast", desc: "Scrambled or fried eggs with whole-grain toast and avocado", tag: "Protein" },
+        { name: "Smoothie Bowl", desc: "Banana, spinach, peanut butter blended thick with toppings", tag: "Fresh" },
+        { name: "Yogurt Parfait", desc: "Greek yogurt layered with granola and fruit", tag: "Light" },
+      ],
+    }
+  if (h < 15)
+    return {
+      mealTime: "Lunch",
+      suggestions: [
+        { name: "Chicken Wrap", desc: "Grilled chicken, lettuce, tomato, and dressing in a tortilla", tag: "Filling" },
+        { name: "Veggie Stir-Fry", desc: "Mixed vegetables, rice, soy sauce, and sesame oil", tag: "Quick" },
+        { name: "Soup & Sandwich", desc: "Tomato soup with a grilled cheese sandwich", tag: "Comfort" },
+        { name: "Grain Bowl", desc: "Quinoa, roasted veggies, chickpeas, and tahini dressing", tag: "Healthy" },
+      ],
+    }
+  return {
+    mealTime: "Dinner",
+    suggestions: [
+      { name: "Pasta & Veggies", desc: "Whole wheat pasta with roasted vegetables and olive oil", tag: "Comfort" },
+      { name: "Baked Salmon", desc: "Salmon fillet with roasted sweet potato and greens", tag: "Protein" },
+      { name: "Taco Night", desc: "Seasoned ground turkey, lettuce, cheese, and salsa in shells", tag: "Fun" },
+      { name: "Stir-Fry Noodles", desc: "Rice noodles with veggies, tofu or chicken, and soy sauce", tag: "Quick" },
+    ],
+  }
+}
 
 /* -- Roadblock exercises -- */
 const roadblocks = [
@@ -169,6 +194,8 @@ export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [journalUnlocked, setJournalUnlocked] = useState(false)
   const [showFuelModal, setShowFuelModal] = useState(false)
+  const [fuelStep, setFuelStep] = useState<"choice" | "already-ate" | "not-yet">("choice")
+  const [fuelDone, setFuelDone] = useState(false)
   const [showWorryBox, setShowWorryBox] = useState(false)
   const [showRoadblock, setShowRoadblock] = useState<typeof roadblocks[0] | null>(null)
   const [showThoughtSorter, setShowThoughtSorter] = useState(false)
@@ -361,14 +388,44 @@ export default function HomePage() {
             {/* -- Fuel Check -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Fuel Level</h2>
-                <span className="text-sm font-bold text-[#FFD700]">{fuelLevel}%</span>
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Fuel Check</h2>
+                {fuelDone && (
+                  <span className="flex items-center gap-1 rounded-full bg-[#2E8B57]/20 px-3 py-1 text-xs font-bold text-[#A8E6B0]">
+                    <Check className="h-3 w-3" /> Fueled
+                  </span>
+                )}
               </div>
-              <Progress value={fuelLevel} className="mb-3 h-4 rounded-full" />
-              <p className="mb-3 text-sm text-[#8AA8C7]">Fuel low? Complete a real-world task to recharge.</p>
-              <Button onClick={() => setShowFuelModal(true)} className="w-full rounded-xl bg-[#D4872C] text-white hover:bg-[#B8711E]">
-                <Camera className="mr-2 h-4 w-4" /> Complete a Task (Photo Proof)
-              </Button>
+              <p className="mb-4 text-sm text-[#8AA8C7]">
+                {fuelDone ? "Great job fueling up today!" : "Have you eaten today? Tap below to check in."}
+              </p>
+              {!fuelDone ? (
+                <button
+                  onClick={() => { setFuelStep("choice"); setShowFuelModal(true) }}
+                  className="group flex w-full flex-col items-center gap-3 rounded-2xl bg-[#1A2D42] p-6 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#D4872C]/15 transition-transform group-hover:scale-110">
+                    <UtensilsCrossed className="h-10 w-10 text-[#D4872C]" />
+                  </div>
+                  <span className="text-base font-bold text-white">Add Fuel</span>
+                  <span className="text-xs text-[#8AA8C7]">Log a meal or get suggestions</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 rounded-2xl bg-[#2E8B57]/10 p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#2E8B57]/20">
+                    <Check className="h-6 w-6 text-[#2E8B57]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[#A8E6B0]">Fuel logged for today</p>
+                    <p className="text-xs text-[#8AA8C7]">+15 XP earned</p>
+                  </div>
+                  <button
+                    onClick={() => { setFuelStep("choice"); setShowFuelModal(true) }}
+                    className="rounded-lg bg-[#1A2D42] px-3 py-1.5 text-xs font-bold text-[#8AA8C7] transition-colors hover:bg-[#243B55]"
+                  >
+                    Log again
+                  </button>
+                </div>
+              )}
             </section>
 
             {/* -- Today's Quest -- */}
@@ -577,21 +634,118 @@ export default function HomePage() {
 
       {/* ---- MODALS ---- */}
 
-      {/* Fuel Task Modal */}
-      <Dialog open={showFuelModal} onOpenChange={setShowFuelModal}>
+      {/* Fuel Modal -- multi-step */}
+      <Dialog open={showFuelModal} onOpenChange={(open) => { setShowFuelModal(open); if (!open) setFuelStep("choice") }}>
         <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">Refuel: Complete a Task</DialogTitle>
-            <DialogDescription className="text-sm text-[#8AA8C7]">Complete one of these tasks and upload a photo as proof.</DialogDescription>
-          </DialogHeader>
-          <div className="mt-3 flex flex-col gap-2">
-            {dailyTasks.map((t) => (
-              <button key={t.id} className="flex items-center gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-transform hover:scale-[1.01] active:scale-[0.99]">
-                <Camera className="h-5 w-5 shrink-0 text-[#D4872C]" />
-                <span className="text-sm font-bold text-white">{t.label}</span>
-              </button>
-            ))}
-          </div>
+          {fuelStep === "choice" && (
+            <>
+              <DialogHeader className="flex flex-col items-center gap-3">
+                <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-[#D4872C]/15">
+                  <Camera className="h-12 w-12 text-[#D4872C]" />
+                </div>
+                <DialogTitle className="text-xl font-bold text-white">Have You Eaten?</DialogTitle>
+                <DialogDescription className="text-center text-sm text-[#8AA8C7]">Fueling your body is part of the adventure. Let us know how your eating is going today.</DialogDescription>
+              </DialogHeader>
+              <div className="mt-5 flex flex-col gap-3">
+                <button
+                  onClick={() => setFuelStep("already-ate")}
+                  className="flex items-center gap-4 rounded-2xl bg-[#2E8B57]/15 p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ring-1 ring-[#2E8B57]/30"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#2E8B57]/20">
+                    <Check className="h-7 w-7 text-[#2E8B57]" />
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-[#A8E6B0]">I already ate</p>
+                    <p className="text-sm text-[#8AA8C7]">Record what you had with a photo</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setFuelStep("not-yet")}
+                  className="flex items-center gap-4 rounded-2xl bg-[#D4872C]/10 p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ring-1 ring-[#D4872C]/30"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#D4872C]/20">
+                    <Clock className="h-7 w-7 text-[#D4872C]" />
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-[#FFD699]">{"I haven't eaten yet"}</p>
+                    <p className="text-sm text-[#8AA8C7]">Get meal ideas based on the time of day</p>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
+
+          {fuelStep === "already-ate" && (
+            <>
+              <DialogHeader>
+                <button onClick={() => setFuelStep("choice")} className="mb-2 flex items-center gap-1 text-sm text-[#5A8AAF] transition-colors hover:text-white">
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+                <DialogTitle className="text-xl font-bold text-white">Record Your Meal</DialogTitle>
+                <DialogDescription className="text-sm text-[#8AA8C7]">Take a photo of what you ate to log it. You earn +15 XP for fueling up.</DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 flex flex-col items-center gap-4">
+                <button className="group flex h-40 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#2E8B57]/40 bg-[#1A2D42] transition-all hover:border-[#2E8B57] hover:bg-[#2E8B57]/5">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2E8B57]/15 transition-transform group-hover:scale-110">
+                    <Camera className="h-8 w-8 text-[#2E8B57]" />
+                  </div>
+                  <span className="text-sm font-bold text-[#A8E6B0]">Tap to take a photo</span>
+                  <span className="text-xs text-[#5A8AAF]">or upload from gallery</span>
+                </button>
+                <textarea
+                  placeholder="What did you eat? (optional)"
+                  className="min-h-20 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]"
+                />
+                <Button
+                  onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice") }}
+                  className="w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"
+                >
+                  <Check className="mr-2 h-4 w-4" /> Log Meal (+15 XP)
+                </Button>
+              </div>
+            </>
+          )}
+
+          {fuelStep === "not-yet" && (() => {
+            const { mealTime, suggestions } = getMealSuggestions()
+            return (
+              <>
+                <DialogHeader>
+                  <button onClick={() => setFuelStep("choice")} className="mb-2 flex items-center gap-1 text-sm text-[#5A8AAF] transition-colors hover:text-white">
+                    <ArrowLeft className="h-4 w-4" /> Back
+                  </button>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-[#D4872C]" />
+                      {mealTime} Ideas
+                    </span>
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-[#8AA8C7]">
+                    {"It's"} {mealTime.toLowerCase()} time. Here are some ideas to get you fueled up.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-4 flex flex-col gap-2">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.name}
+                      onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice") }}
+                      className="flex items-start gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D4872C]/15">
+                        <UtensilsCrossed className="h-5 w-5 text-[#D4872C]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white">{s.name}</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-[#8AA8C7]">{s.desc}</p>
+                      </div>
+                      <span className="mt-0.5 rounded-full bg-[#D4872C]/15 px-2.5 py-1 text-[10px] font-bold text-[#FFD699]">{s.tag}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-center text-xs text-[#5A8AAF]">Tap a meal to log it. You can always take a photo after!</p>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
