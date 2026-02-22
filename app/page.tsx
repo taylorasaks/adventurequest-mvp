@@ -10,8 +10,9 @@ import {
   Music, Image, PenLine, Zap, Smile, Palette, BookOpen,
   HandMetal, Shield, Bike, BrainCircuit, Gauge, HeartHandshake,
   UtensilsCrossed, Clock, Check, ArrowLeft, Phone, Pencil,
-  Puzzle, Eye, Gamepad2, Megaphone, User, Apple, Leaf, Salad,
-  Activity, Frown, CircleAlert, ListChecks, Search
+  Puzzle, Eye, Gamepad2, Megaphone, User, Leaf, Salad,
+  CircleAlert, ListChecks, Search, Bot, ChevronDown,
+  ChevronUp, Timer
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -61,6 +62,7 @@ const eveningQs = [
 /* ------------------------------------------------------------------ */
 const stressWords = ["stressed", "anxious", "panic", "overwhelmed", "scared", "afraid", "worried", "nervous", "can't breathe", "freaking out", "tense", "dread"]
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function detectStress(text: string): boolean {
   const lower = text.toLowerCase()
   return stressWords.some((w) => lower.includes(w))
@@ -315,7 +317,6 @@ export default function HomePage() {
   const [selectedMedChar, setSelectedMedChar] = useState(meditationCharacters[0].id)
   const [worryText, setWorryText] = useState("")
   const [thoughtText, setThoughtText] = useState("")
-  const [breathCount, setBreathCount] = useState(0)
   // section state replaced by activeTab below
   const [friendMsg, setFriendMsg] = useState("")
   const [activeAdventure] = useState("jungle")
@@ -339,6 +340,26 @@ export default function HomePage() {
   /* -- Self-efficacy popup -- */
   const [showSelfEfficacy, setShowSelfEfficacy] = useState(false)
   const [tasksCompletedThisWeek] = useState(6)
+
+  /* -- Solution Box (AI therapist chat) -- */
+  const [showSolutionBox, setShowSolutionBox] = useState(false)
+  const [solutionMessages, setSolutionMessages] = useState<{ role: "user" | "ai"; text: string; time: string }[]>([
+    { role: "ai", text: "Hi there. I am your Solution Guide. Tell me what is on your mind, and we will work through it together.", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+  ])
+  const [solutionInput, setSolutionInput] = useState("")
+
+  /* -- Breathing countdown for roadblock -- */
+  const [breathPhase, setBreathPhase] = useState<"idle" | "in" | "out" | "done">("idle")
+  const [breathTimer, setBreathTimer] = useState(0)
+  const [breathRound, setBreathRound] = useState(0)
+  const breathIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  /* -- Voice journal 60s timer -- */
+  const [recordSeconds, setRecordSeconds] = useState(0)
+  const recordIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  /* -- My Day expand -- */
+  const [myDayExpanded, setMyDayExpanded] = useState(false)
 
   /* -- Profile state -- */
   const [profileDiet, setProfileDiet] = useState("both")
@@ -366,28 +387,130 @@ export default function HomePage() {
     setMyDayLog((prev) => [...prev, { time, label }])
   }
 
+  function finishRecording() {
+    setIsRecording(false)
+    setRecordSeconds(0)
+    if (recordIntervalRef.current) { clearInterval(recordIntervalRef.current); recordIntervalRef.current = null }
+    setJournalUnlocked(true)
+    addToMyDay("Voice journal completed")
+    triggerReflection()
+    if (Math.random() < 0.3) setShowStressBreathing(true)
+    if (!showSelfEfficacy && myDayLog.length > 0 && myDayLog.length % 3 === 0) {
+      setShowSelfEfficacy(true)
+      setTimeout(() => setShowSelfEfficacy(false), 4000)
+    }
+  }
+
   useEffect(() => {
     if (isRecording) {
-      recordTimerRef.current = setTimeout(() => {
-        setIsRecording(false)
-        setJournalUnlocked(true)
-        addToMyDay("Voice journal completed")
-        triggerReflection()
-        // Simulate stress detection (in real app, analyze transcription)
-        if (Math.random() < 0.3) {
-          setShowStressBreathing(true)
-        }
-        // Show self-efficacy popup periodically
-        if (!showSelfEfficacy && myDayLog.length > 0 && myDayLog.length % 3 === 0) {
-          setShowSelfEfficacy(true)
-          setTimeout(() => setShowSelfEfficacy(false), 4000)
-        }
-      }, 2000)
-    } else if (recordTimerRef.current) {
-      clearTimeout(recordTimerRef.current)
+      setRecordSeconds(0)
+      recordIntervalRef.current = setInterval(() => {
+        setRecordSeconds((s) => {
+          if (s >= 59) {
+            finishRecording()
+            return 0
+          }
+          return s + 1
+        })
+      }, 1000)
+      // Minimum 2s hold to unlock
+      recordTimerRef.current = setTimeout(() => {}, 2000)
+    } else {
+      if (recordIntervalRef.current) { clearInterval(recordIntervalRef.current); recordIntervalRef.current = null }
+      if (recordTimerRef.current) clearTimeout(recordTimerRef.current)
+      // If held for at least 2s, finish
+      if (recordSeconds >= 2 && !journalUnlocked) {
+        finishRecording()
+      }
     }
-    return () => { if (recordTimerRef.current) clearTimeout(recordTimerRef.current) }
+    return () => {
+      if (recordIntervalRef.current) clearInterval(recordIntervalRef.current)
+      if (recordTimerRef.current) clearTimeout(recordTimerRef.current)
+    }
   }, [isRecording])
+
+  /* -- Solution Box send -- */
+  const aiReplies = [
+    "That sounds really tough. Can you tell me more about what triggered that feeling?",
+    "You are doing something brave by putting it into words. What would you say to a friend going through this?",
+    "I hear you. What is one small thing you could do right now to take care of yourself?",
+    "That is a valid feeling. Sometimes naming it is the first step. How intense is it from 1 to 10?",
+    "Let us break that down. What part of it feels the heaviest right now?",
+    "You are showing real self-awareness. What has helped you cope with something similar before?",
+    "I am proud of you for sharing. Would it help to try a breathing exercise before we continue?",
+  ]
+
+  function sendSolutionMessage() {
+    if (!solutionInput.trim()) return
+    const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    const userMsg = { role: "user" as const, text: solutionInput.trim(), time: now }
+    setSolutionMessages((prev) => [...prev, userMsg])
+    setSolutionInput("")
+    addToMyDay(`Solution Box: sent message`)
+    // Simulate AI reply after short delay
+    setTimeout(() => {
+      const reply = aiReplies[Math.floor(Math.random() * aiReplies.length)]
+      const aiTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      setSolutionMessages((prev) => [...prev, { role: "ai", text: reply, time: aiTime }])
+    }, 1200)
+  }
+
+  /* -- Breathing countdown logic for roadblock -- */
+  function startBreathingExercise() {
+    setBreathPhase("in")
+    setBreathTimer(5)
+    setBreathRound(1)
+
+    if (breathIntervalRef.current) clearInterval(breathIntervalRef.current)
+
+    let phase: "in" | "out" = "in"
+    let timer = 5
+    let round = 1
+
+    breathIntervalRef.current = setInterval(() => {
+      timer -= 1
+      if (timer <= 0) {
+        if (phase === "in") {
+          if (round >= 3) {
+            // Switch to out phase
+            phase = "out"
+            round = 1
+            timer = 8
+            setBreathPhase("out")
+            setBreathRound(1)
+            setBreathTimer(8)
+            return
+          }
+          round += 1
+          timer = 5
+          setBreathRound(round)
+          setBreathTimer(5)
+          return
+        }
+        if (phase === "out") {
+          if (round >= 3) {
+            // Done
+            if (breathIntervalRef.current) clearInterval(breathIntervalRef.current)
+            setBreathPhase("done")
+            setBreathTimer(0)
+            addToMyDay("Breathing roadblock completed")
+            triggerReflection()
+            return
+          }
+          round += 1
+          timer = 8
+          setBreathRound(round)
+          setBreathTimer(8)
+          return
+        }
+      }
+      setBreathTimer(timer)
+    }, 1000)
+  }
+
+  useEffect(() => {
+    return () => { if (breathIntervalRef.current) clearInterval(breathIntervalRef.current) }
+  }, [])
 
   return (
     <div className="flex h-dvh flex-col bg-[#0C1B2A]">
@@ -425,42 +548,84 @@ export default function HomePage() {
               </p>
             </section>
 
-            {/* -- Voice Journal Card -- */}
+            {/* -- Voice Journal Card (60s max) -- */}
             <section className="rounded-3xl bg-[#13263A] p-6">
               <div className="mb-1 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">{"Today's Journal"}</h2>
-                {journalUnlocked && <span className="rounded-full bg-[#2E8B57]/20 px-3 py-1 text-xs font-bold text-[#A8E6B0]">Unlocked</span>}
+                {journalUnlocked ? (
+                  <span className="rounded-full bg-[#2E8B57]/20 px-3 py-1 text-xs font-bold text-[#A8E6B0]">Unlocked</span>
+                ) : (
+                  <span className="flex items-center gap-1 rounded-full bg-[#1A2D42] px-3 py-1 text-xs font-bold text-[#5A8AAF]">
+                    <Timer className="h-3 w-3" /> 60s max
+                  </span>
+                )}
               </div>
               <p className="mb-5 text-lg font-bold leading-relaxed text-white">{question}</p>
               <div className="flex flex-col items-center gap-3">
-                <button
-                  onMouseDown={() => setIsRecording(true)} onMouseUp={() => setIsRecording(false)} onMouseLeave={() => setIsRecording(false)}
-                  onTouchStart={() => setIsRecording(true)} onTouchEnd={() => setIsRecording(false)}
-                  className={`flex h-20 w-20 items-center justify-center rounded-full transition-all ${isRecording ? "scale-110 bg-[#FF6B6B]" : "bg-[#2E8B57] hover:bg-[#24734A]"}`}
-                  style={{ boxShadow: isRecording ? "0 0 0 8px rgba(255,107,107,0.25), 0 0 24px rgba(255,107,107,0.3)" : "0 4px 20px rgba(46,139,87,0.35)" }}
-                  aria-label="Hold to record your voice journal"
-                >
-                  {isRecording ? <Pause className="h-8 w-8 text-white" /> : <Mic className="h-8 w-8 text-white" />}
-                </button>
-                <span className="text-sm font-semibold text-[#5A8AAF]">{isRecording ? "Recording..." : "Hold to record"}</span>
+                <div className="relative">
+                  <button
+                    onMouseDown={() => !journalUnlocked && setIsRecording(true)} onMouseUp={() => setIsRecording(false)} onMouseLeave={() => setIsRecording(false)}
+                    onTouchStart={() => !journalUnlocked && setIsRecording(true)} onTouchEnd={() => setIsRecording(false)}
+                    disabled={journalUnlocked}
+                    className={`flex h-20 w-20 items-center justify-center rounded-full transition-all ${journalUnlocked ? "bg-[#2E8B57]/30 opacity-60" : isRecording ? "scale-110 bg-[#FF6B6B]" : "bg-[#2E8B57] hover:bg-[#24734A]"}`}
+                    style={{ boxShadow: isRecording ? "0 0 0 8px rgba(255,107,107,0.25), 0 0 24px rgba(255,107,107,0.3)" : "0 4px 20px rgba(46,139,87,0.35)" }}
+                    aria-label="Hold to record your voice journal"
+                  >
+                    {isRecording ? <Pause className="h-8 w-8 text-white" /> : <Mic className="h-8 w-8 text-white" />}
+                  </button>
+                  {/* Circular timer ring */}
+                  {isRecording && (
+                    <svg className="absolute -inset-2 h-24 w-24" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="46" fill="none" stroke="#FF6B6B" strokeWidth="3" strokeOpacity="0.2" />
+                      <circle cx="50" cy="50" r="46" fill="none" stroke="#FF6B6B" strokeWidth="3"
+                        strokeDasharray={`${(recordSeconds / 60) * 289} 289`}
+                        strokeLinecap="round" transform="rotate(-90 50 50)"
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-sm font-semibold text-[#5A8AAF]">
+                  {journalUnlocked ? "Journal recorded" : isRecording ? `Recording... ${recordSeconds}s / 60s` : "Hold to record"}
+                </span>
               </div>
             </section>
 
-            {/* -- My Day (auto-log of completed tasks) -- */}
+            {/* -- My Day (expandable auto-log of ALL completed tasks) -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">My Day</h2>
-                <ListChecks className="h-4 w-4 text-[#5A8AAF]" />
-              </div>
+              <button
+                onClick={() => setMyDayExpanded((prev) => !prev)}
+                className="flex w-full items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">My Day</h2>
+                  {myDayLog.length > 0 && (
+                    <span className="rounded-full bg-[#2E8B57]/20 px-2 py-0.5 text-[10px] font-bold text-[#A8E6B0]">{myDayLog.length} logged</span>
+                  )}
+                </div>
+                {myDayLog.length > 0 ? (
+                  myDayExpanded ? <ChevronUp className="h-4 w-4 text-[#5A8AAF]" /> : <ChevronDown className="h-4 w-4 text-[#5A8AAF]" />
+                ) : (
+                  <ListChecks className="h-4 w-4 text-[#5A8AAF]" />
+                )}
+              </button>
               {myDayLog.length === 0 ? (
-                <p className="text-sm text-[#8AA8C7]">Complete activities to see your progress here. Each task is logged automatically.</p>
+                <p className="mt-2 text-sm text-[#8AA8C7]">Complete activities to see your progress here. Everything is logged with timestamps.</p>
+              ) : !myDayExpanded ? (
+                <p className="mt-2 text-sm text-[#8AA8C7]">
+                  Last: <span className="text-white">{myDayLog[myDayLog.length - 1].label}</span>
+                  <span className="ml-2 text-xs text-[#5A8AAF]">{myDayLog[myDayLog.length - 1].time}</span>
+                </p>
               ) : (
-                <div className="flex flex-col gap-1.5">
+                <div className="mt-3 flex flex-col gap-1.5">
                   {myDayLog.map((entry, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-xl bg-[#1A2D42] p-3">
-                      <span className="text-xs font-bold text-[#5A8AAF]">{entry.time}</span>
-                      <span className="text-sm text-white">{entry.label}</span>
-                      <Check className="ml-auto h-3.5 w-3.5 text-[#2E8B57]" />
+                    <div key={i} className="flex items-start gap-3 rounded-xl bg-[#1A2D42] p-3">
+                      <span className="mt-0.5 shrink-0 text-xs font-bold text-[#5A8AAF]">{entry.time}</span>
+                      <div className="flex flex-1 items-start gap-2">
+                        <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#2E8B57]" />
+                        <span className="text-sm leading-relaxed text-white">{entry.label}</span>
+                      </div>
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#2E8B57]" />
                     </div>
                   ))}
                 </div>
@@ -522,6 +687,21 @@ export default function HomePage() {
               </Button>
             </section>
 
+            {/* -- Solution Box (AI Therapist Chat) -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Solution Box</h2>
+                <Bot className="h-4 w-4 text-[#4ECDC4]" />
+              </div>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Chat with your AI guide. Your conversation is stored for your therapist to review.</p>
+              <Button onClick={() => setShowSolutionBox(true)} className="w-full rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]">
+                <MessageCircle className="mr-2 h-4 w-4" /> Open Solution Box
+              </Button>
+              {solutionMessages.length > 1 && (
+                <p className="mt-2 text-center text-xs text-[#5A8AAF]">{solutionMessages.filter(m => m.role === "user").length} messages sent this session</p>
+              )}
+            </section>
+
             {/* -- Extra XP -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <div className="mb-2 flex items-center justify-between">
@@ -540,7 +720,7 @@ export default function HomePage() {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => { if (!done) { setCompletedXp((prev) => [...prev, item.id]); triggerReflection() } }}
+                      onClick={() => { if (!done) { setCompletedXp((prev) => [...prev, item.id]); addToMyDay(`Extra XP: ${item.label}`); triggerReflection() } }}
                       className={`flex items-center gap-3 rounded-2xl p-4 text-left transition-all ${done ? "bg-[#2E8B57]/15 ring-1 ring-[#2E8B57]/30" : "bg-[#1A2D42] hover:scale-[1.01] active:scale-[0.99]"}`}
                     >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: done ? "#2E8B5722" : `${item.color}22` }}>
@@ -971,7 +1151,7 @@ export default function HomePage() {
                   <span className="text-xs text-[#5A8AAF]">or upload from gallery</span>
                 </button>
                 <textarea placeholder="What did you eat? (optional)" className="min-h-20 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]" />
-                <Button onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice"); triggerReflection() }} className="w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]">
+                <Button onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice"); addToMyDay("Fuel: logged a meal"); triggerReflection() }} className="w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]">
                   <Check className="mr-2 h-4 w-4" /> Log Meal (+15 {currency.name})
                 </Button>
               </div>
@@ -988,7 +1168,7 @@ export default function HomePage() {
                 </DialogHeader>
                 <div className="mt-4 flex flex-col gap-2">
                   {suggestions.map((s) => (
-                    <button key={s.name} onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice"); triggerReflection() }} className="flex items-start gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]">
+                    <button key={s.name} onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice"); addToMyDay(`Fuel: chose ${s.name}`); triggerReflection() }} className="flex items-start gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D4872C]/15"><UtensilsCrossed className="h-5 w-5 text-[#D4872C]" /></div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">{s.name}</p>
@@ -1013,7 +1193,7 @@ export default function HomePage() {
             <DialogDescription className="text-sm text-[#8AA8C7]">Write it down and lock it away. Open it with your therapist.</DialogDescription>
           </DialogHeader>
           <textarea value={worryText} onChange={(e) => setWorryText(e.target.value)} placeholder="What is worrying you?" className="mt-3 min-h-28 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]" />
-          <Button onClick={() => { setWorryText(""); setShowWorryBox(false); triggerReflection() }} className="mt-3 w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Lock className="mr-2 h-4 w-4" /> Lock it Away</Button>
+          <Button onClick={() => { addToMyDay("Worry Box: locked away a worry"); setWorryText(""); setShowWorryBox(false); triggerReflection() }} className="mt-3 w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Lock className="mr-2 h-4 w-4" /> Lock it Away</Button>
         </DialogContent>
       </Dialog>
 
@@ -1028,11 +1208,59 @@ export default function HomePage() {
             <DialogDescription className="text-sm text-[#8AA8C7]">{showRoadblock?.desc}</DialogDescription>
           </DialogHeader>
           {showRoadblock?.id === "breathe" && (
-            <div className="mt-4 flex flex-col items-center gap-3">
-              <div className={`flex h-28 w-28 items-center justify-center rounded-full transition-all duration-1000 ${breathCount % 2 === 0 ? "scale-100 bg-[#4ECDC4]/20" : "scale-125 bg-[#4ECDC4]/40"}`}>
-                <span className="text-2xl font-bold text-[#4ECDC4]">{breathCount % 2 === 0 ? "Breathe In" : "Breathe Out"}</span>
-              </div>
-              <Button onClick={() => { setBreathCount((c) => c + 1); if (breathCount >= 5) triggerReflection() }} className="rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]"><Wind className="mr-2 h-4 w-4" /> {breathCount === 0 ? "Start" : "Next Breath"} ({breathCount}/6)</Button>
+            <div className="mt-4 flex flex-col items-center gap-4">
+              {breathPhase === "idle" ? (
+                <>
+                  <p className="text-sm text-[#8AA8C7]">Breathe in for 5 seconds (3 times), then breathe out for 8 seconds (3 times).</p>
+                  <Button onClick={startBreathingExercise} className="rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]">
+                    <Wind className="mr-2 h-4 w-4" /> Start Breathing
+                  </Button>
+                </>
+              ) : breathPhase === "done" ? (
+                <>
+                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-[#2E8B57]/20">
+                    <Check className="h-12 w-12 text-[#2E8B57]" />
+                  </div>
+                  <p className="text-lg font-bold text-[#A8E6B0]">Exercise Complete</p>
+                  <Button onClick={() => { setBreathPhase("idle"); setShowRoadblock(null) }} className="rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]">
+                    <Check className="mr-2 h-4 w-4" /> Done
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className={`flex h-32 w-32 items-center justify-center rounded-full transition-all duration-1000 ${breathPhase === "in" ? "scale-110 bg-[#4ECDC4]/30" : "scale-90 bg-[#1E90FF]/30"}`}>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-3xl font-extrabold tabular-nums" style={{ color: breathPhase === "in" ? "#4ECDC4" : "#1E90FF" }}>{breathTimer}</span>
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: breathPhase === "in" ? "#4ECDC4" : "#1E90FF" }}>
+                        {breathPhase === "in" ? "Breathe In" : "Breathe Out"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-[#8AA8C7]">
+                    <span className="font-bold text-white">Round {breathRound}/3</span>
+                    <span>({breathPhase === "in" ? "5s inhale" : "8s exhale"})</span>
+                  </div>
+                  {/* Progress dots */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-bold text-[#4ECDC4]">IN</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3].map((r) => (
+                          <div key={r} className={`h-2.5 w-2.5 rounded-full ${breathPhase === "in" && r <= breathRound ? "bg-[#4ECDC4]" : breathPhase === "out" ? "bg-[#4ECDC4]" : "bg-[#1A2D42]"}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-bold text-[#1E90FF]">OUT</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3].map((r) => (
+                          <div key={r} className={`h-2.5 w-2.5 rounded-full ${breathPhase === "out" && r <= breathRound ? "bg-[#1E90FF]" : "bg-[#1A2D42]"}`} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
           {showRoadblock?.id === "stretch" && (
@@ -1049,7 +1277,7 @@ export default function HomePage() {
             <div className="mt-4 flex flex-col items-center gap-3">
               <Heart className="h-16 w-16 text-[#1E90FF]" />
               <p className="text-base font-bold text-white">Go drink a glass of water right now!</p>
-              <Button onClick={() => { setShowRoadblock(null); triggerReflection() }} className="rounded-xl bg-[#1E90FF] text-white hover:bg-[#1878D6]"><Heart className="mr-2 h-4 w-4" /> Done!</Button>
+              <Button onClick={() => { setShowRoadblock(null); addToMyDay("Roadblock: drank water"); triggerReflection() }} className="rounded-xl bg-[#1E90FF] text-white hover:bg-[#1878D6]"><Heart className="mr-2 h-4 w-4" /> Done!</Button>
             </div>
           )}
         </DialogContent>
@@ -1064,8 +1292,8 @@ export default function HomePage() {
           </DialogHeader>
           <textarea value={thoughtText} onChange={(e) => setThoughtText(e.target.value)} placeholder="Write a thought..." className="mt-3 min-h-20 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#9B59B6]" />
           <div className="mt-3 flex gap-3">
-            <Button onClick={() => { setThoughtText(""); triggerReflection() }} variant="outline" className="flex-1 rounded-xl border-[#E84535]/40 text-[#E84535] hover:bg-[#E84535]/10"><Trash2 className="mr-2 h-4 w-4" /> Trash It</Button>
-            <Button onClick={() => { setThoughtText(""); triggerReflection() }} className="flex-1 rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Gem className="mr-2 h-4 w-4" /> Keep It</Button>
+            <Button onClick={() => { setThoughtText(""); addToMyDay("Thought Sorter: trashed a thought"); triggerReflection() }} variant="outline" className="flex-1 rounded-xl border-[#E84535]/40 text-[#E84535] hover:bg-[#E84535]/10"><Trash2 className="mr-2 h-4 w-4" /> Trash It</Button>
+            <Button onClick={() => { setThoughtText(""); addToMyDay("Thought Sorter: kept a thought"); triggerReflection() }} className="flex-1 rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Gem className="mr-2 h-4 w-4" /> Keep It</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1085,7 +1313,7 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-          <Button onClick={() => { setShowMeditation(false); triggerReflection() }} className="mt-4 w-full rounded-xl bg-[#DDA0DD] text-[#1A1014] hover:bg-[#CC8FCC]"><Wind className="mr-2 h-4 w-4" /> Begin Breathing</Button>
+          <Button onClick={() => { setShowMeditation(false); addToMyDay("Meditation: breathing session"); triggerReflection() }} className="mt-4 w-full rounded-xl bg-[#DDA0DD] text-[#1A1014] hover:bg-[#CC8FCC]"><Wind className="mr-2 h-4 w-4" /> Begin Breathing</Button>
         </DialogContent>
       </Dialog>
 
@@ -1189,7 +1417,7 @@ export default function HomePage() {
                 <span className="text-sm font-bold" style={{ color: showBoostModal.color }}>Upload Photo Proof</span>
               </button>
               <Button
-                onClick={() => { setCompletedBoosts((prev) => [...prev, showBoostModal.id]); setShowBoostModal(null); triggerReflection() }}
+                onClick={() => { setCompletedBoosts((prev) => [...prev, showBoostModal.id]); addToMyDay(`Boost: ${showBoostModal.label}`); setShowBoostModal(null); triggerReflection() }}
                 className="mt-3 w-full rounded-xl text-white"
                 style={{ backgroundColor: showBoostModal.color }}
               >
@@ -1259,7 +1487,49 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-          <Button onClick={() => { setShowRecipes(false); triggerReflection() }} className="mt-3 w-full rounded-xl bg-[#D4872C] text-white hover:bg-[#B8711E]"><Camera className="mr-2 h-4 w-4" /> Upload Meal Photo</Button>
+          <Button onClick={() => { setShowRecipes(false); addToMyDay("Recipes: uploaded meal photo"); triggerReflection() }} className="mt-3 w-full rounded-xl bg-[#D4872C] text-white hover:bg-[#B8711E]"><Camera className="mr-2 h-4 w-4" /> Upload Meal Photo</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Solution Box Chat Modal */}
+      <Dialog open={showSolutionBox} onOpenChange={setShowSolutionBox}>
+        <DialogContent className="mx-auto flex max-w-sm flex-col rounded-3xl border-[#2A3E55] bg-[#13263A] p-0" style={{ height: "80vh", maxHeight: "600px" }}>
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-[#1A2D42] px-5 pt-5 pb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4ECDC4]/20">
+              <Bot className="h-5 w-5 text-[#4ECDC4]" />
+            </div>
+            <div>
+              <DialogTitle className="text-base font-bold text-white">Solution Guide</DialogTitle>
+              <DialogDescription className="text-xs text-[#5A8AAF]">Monitored by your therapist</DialogDescription>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
+            {solutionMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === "user" ? "bg-[#2E8B57] text-white" : "bg-[#1A2D42] text-white"}`}>
+                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                  <p className={`mt-1 text-[10px] ${msg.role === "user" ? "text-white/50" : "text-[#5A8AAF]"}`}>{msg.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div className="flex gap-2 border-t border-[#1A2D42] px-5 py-4">
+            <input
+              value={solutionInput}
+              onChange={(e) => setSolutionInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") sendSolutionMessage() }}
+              placeholder="Type your thoughts..."
+              className="flex-1 rounded-xl border-0 bg-[#1A2D42] px-4 py-3 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#4ECDC4]"
+            />
+            <Button onClick={sendSolutionMessage} className="rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]">
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
