@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, Send, Package, Snowflake, Brain, BookOpen, Trophy, ChefHat, Dumbbell, Ghost, Map } from "lucide-react"
+import { Eye, Send, Package, Snowflake, Brain, BookOpen, Trophy, ChefHat, Dumbbell, Ghost, Map, AlertTriangle, Camera, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -18,11 +18,11 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const patients = [
-  { id: 1, name: "Alex Rivera", landscape: "Jungle", fuel: 75, streak: 12, lastActive: "Today", quest: "Quest #3", repetition: 2, freezesUsed: 0, freezesTotal: 1, worries: ["Worried about job interview", "Family stress"], journalEntries: 24, thoughtSorts: 8, monstersDefeated: 3, recipesCooked: 6, coins: 410, leaderboardRank: 1, workouts: 15, modulesCompleted: ["Deep Breathing", "Grounding (5-4-3-2-1)", "Positive Self-Talk"] },
-  { id: 2, name: "Jordan Lee", landscape: "Ocean", fuel: 45, streak: 5, lastActive: "Yesterday", quest: "Quest #2", repetition: 1, freezesUsed: 1, freezesTotal: 1, worries: ["Feeling overwhelmed at school"], journalEntries: 10, thoughtSorts: 3, monstersDefeated: 1, recipesCooked: 2, coins: 310, leaderboardRank: 2, workouts: 6, modulesCompleted: ["Deep Breathing"] },
-  { id: 3, name: "Sam Nguyen", landscape: "Savannah", fuel: 90, streak: 21, lastActive: "Today", quest: "Quest #5", repetition: 3, freezesUsed: 0, freezesTotal: 1, worries: [], journalEntries: 42, thoughtSorts: 15, monstersDefeated: 5, recipesCooked: 14, coins: 240, leaderboardRank: 3, workouts: 28, modulesCompleted: ["Deep Breathing", "Self-Advocacy", "Positive Self-Talk", "Thought Sorting", "Grounding (5-4-3-2-1)", "Schedule the Joy"] },
-  { id: 4, name: "Taylor Brooks", landscape: "Desert", fuel: 30, streak: 2, lastActive: "3 days ago", quest: "Quest #1", repetition: 1, freezesUsed: 1, freezesTotal: 1, worries: ["Rent is due", "Can not sleep"], journalEntries: 4, thoughtSorts: 1, monstersDefeated: 0, recipesCooked: 1, coins: 120, leaderboardRank: 5, workouts: 2, modulesCompleted: [] },
-  { id: 5, name: "Morgan Chen", landscape: "Mountains", fuel: 60, streak: 8, lastActive: "Today", quest: "Quest #4", repetition: 2, freezesUsed: 0, freezesTotal: 1, worries: ["Health anxiety"], journalEntries: 18, thoughtSorts: 6, monstersDefeated: 2, recipesCooked: 5, coins: 195, leaderboardRank: 4, workouts: 12, modulesCompleted: ["Deep Breathing", "Meditation Break", "Stretch & Move"] },
+  { id: 1, name: "Alex Rivera", landscape: "Jungle", fuel: 75, streak: 12, lastActive: "Today", quest: "Quest #3", repetition: 2, freezesUsed: 0, freezesTotal: 1, worries: ["Worried about job interview", "Family stress"], journalEntries: 24, thoughtSorts: 8, monstersDefeated: 3, recipesCooked: 6, coins: 410, leaderboardRank: 1, workouts: 15, modulesCompleted: ["Deep Breathing", "Grounding (5-4-3-2-1)", "Positive Self-Talk"], triggerEvents: 1, imageProofs: 8, completionRate: 87 },
+  { id: 2, name: "Jordan Lee", landscape: "Ocean", fuel: 45, streak: 5, lastActive: "Yesterday", quest: "Quest #2", repetition: 1, freezesUsed: 1, freezesTotal: 1, worries: ["Feeling overwhelmed at school"], journalEntries: 10, thoughtSorts: 3, monstersDefeated: 1, recipesCooked: 2, coins: 310, leaderboardRank: 2, workouts: 6, modulesCompleted: ["Deep Breathing"], triggerEvents: 3, imageProofs: 4, completionRate: 62 },
+  { id: 3, name: "Sam Nguyen", landscape: "Savannah", fuel: 90, streak: 21, lastActive: "Today", quest: "Quest #5", repetition: 3, freezesUsed: 0, freezesTotal: 1, worries: [], journalEntries: 42, thoughtSorts: 15, monstersDefeated: 5, recipesCooked: 14, coins: 240, leaderboardRank: 3, workouts: 28, modulesCompleted: ["Deep Breathing", "Self-Advocacy", "Positive Self-Talk", "Thought Sorting", "Grounding (5-4-3-2-1)", "Schedule the Joy"], triggerEvents: 0, imageProofs: 22, completionRate: 95 },
+  { id: 4, name: "Taylor Brooks", landscape: "Desert", fuel: 30, streak: 2, lastActive: "3 days ago", quest: "Quest #1", repetition: 1, freezesUsed: 1, freezesTotal: 1, worries: ["Rent is due", "Can not sleep"], journalEntries: 4, thoughtSorts: 1, monstersDefeated: 0, recipesCooked: 1, coins: 120, leaderboardRank: 5, workouts: 2, modulesCompleted: [], triggerEvents: 5, imageProofs: 1, completionRate: 28 },
+  { id: 5, name: "Morgan Chen", landscape: "Mountains", fuel: 60, streak: 8, lastActive: "Today", quest: "Quest #4", repetition: 2, freezesUsed: 0, freezesTotal: 1, worries: ["Health anxiety"], journalEntries: 18, thoughtSorts: 6, monstersDefeated: 2, recipesCooked: 5, coins: 195, leaderboardRank: 4, workouts: 12, modulesCompleted: ["Deep Breathing", "Meditation Break", "Stretch & Move"], triggerEvents: 2, imageProofs: 10, completionRate: 74 },
 ]
 
 const modules = [
@@ -230,6 +230,34 @@ export function PatientTable() {
                     <p className="text-lg font-bold text-[#1a2b4a]">{viewPatient?.thoughtSorts}</p>
                   </div>
                 </div>
+                <div className="flex items-center gap-3 rounded-xl bg-[#f9fafb] p-4">
+                  <AlertTriangle className="h-5 w-5 text-[#E84535]" />
+                  <div>
+                    <p className="text-xs text-[#8a96aa]">Trigger Events</p>
+                    <p className="text-lg font-bold text-[#E84535]">{viewPatient?.triggerEvents}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-[#f9fafb] p-4">
+                  <Camera className="h-5 w-5 text-[#D4872C]" />
+                  <div>
+                    <p className="text-xs text-[#8a96aa]">Image Proofs</p>
+                    <p className="text-lg font-bold text-[#1a2b4a]">{viewPatient?.imageProofs}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-[#f9fafb] p-4">
+                  <Zap className="h-5 w-5 text-[#FFD700]" />
+                  <div>
+                    <p className="text-xs text-[#8a96aa]">Completion Rate</p>
+                    <p className="text-lg font-bold text-[#1a2b4a]">{viewPatient?.completionRate}%</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-[#f9fafb] p-4">
+                  <Snowflake className="h-5 w-5 text-[#89CFF0]" />
+                  <div>
+                    <p className="text-xs text-[#8a96aa]">Freezes Used</p>
+                    <p className="text-lg font-bold text-[#1a2b4a]">{viewPatient?.freezesUsed}/{viewPatient?.freezesTotal}</p>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl bg-[#f9fafb] p-4">
                 <Map className="h-5 w-5 text-[#4a7cca]" />
@@ -238,13 +266,27 @@ export function PatientTable() {
                   <p className="text-sm text-[#1a2b4a]">{viewPatient?.landscape} - {viewPatient?.quest} (Repetition #{viewPatient?.repetition})</p>
                 </div>
               </div>
+              {/* Trigger Events Warning */}
+              {(viewPatient?.triggerEvents ?? 0) >= 3 && (
+                <div className="flex items-center gap-3 rounded-xl bg-[#FFF0EE] p-4">
+                  <AlertTriangle className="h-5 w-5 text-[#E84535]" />
+                  <div>
+                    <p className="text-xs font-bold text-[#8B2020]">High Trigger Activity</p>
+                    <p className="text-xs text-[#6b7b94]">This patient has had {viewPatient?.triggerEvents} trigger events. Consider reviewing during next session.</p>
+                  </div>
+                </div>
+              )}
             </TabsContent>
-            <TabsContent value="journal" className="mt-4">
+            <TabsContent value="journal" className="mt-4 flex flex-col gap-3">
               <div className="flex items-center gap-2 rounded-xl bg-[#f9fafb] p-4">
                 <BookOpen className="h-5 w-5 text-[#4a7cca]" />
                 <p className="text-sm text-[#1a2b4a]"><strong>{viewPatient?.journalEntries}</strong> voice journal entries</p>
               </div>
-              <p className="mt-3 text-xs text-[#8a96aa]">Voice journal entries are available for playback in the full patient record.</p>
+              <div className="flex items-center gap-2 rounded-xl bg-[#f9fafb] p-4">
+                <Camera className="h-5 w-5 text-[#D4872C]" />
+                <p className="text-sm text-[#1a2b4a]"><strong>{viewPatient?.imageProofs}</strong> image proofs uploaded</p>
+              </div>
+              <p className="mt-1 text-xs text-[#8a96aa]">Voice journal entries and image proofs are available for review in the full patient record.</p>
             </TabsContent>
           </Tabs>
         </DialogContent>

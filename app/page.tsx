@@ -10,7 +10,8 @@ import {
   Music, Image, PenLine, Zap, Smile, Palette, BookOpen,
   HandMetal, Shield, Bike, BrainCircuit, Gauge, HeartHandshake,
   UtensilsCrossed, Clock, Check, ArrowLeft, Phone, Pencil,
-  Puzzle, Eye, Gamepad2, Megaphone
+  Puzzle, Eye, Gamepad2, Megaphone, User, Apple, Leaf, Salad,
+  Activity, Frown, CircleAlert, ListChecks, Search
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -37,9 +38,9 @@ const xpCurrencies: Record<string, { name: string; icon: React.ReactNode; color:
 /*  Time-based question cycling                                        */
 /* ------------------------------------------------------------------ */
 const morningQs = [
-  "What are you excited for today?",
-  "What is for breakfast?",
-  "How did you sleep last night?",
+  "What matters today?",
+  "One thing I will finish is...",
+  "How do I feel right now?",
   "What is one thing you want to accomplish today?",
 ]
 const afternoonQs = [
@@ -49,10 +50,60 @@ const afternoonQs = [
   "What is something kind you did for yourself?",
 ]
 const eveningQs = [
-  "How was your day?",
-  "What was the best part of today?",
+  "What did I complete?",
+  "What felt hard?",
+  "What helped me today?",
   "What is one thing you are grateful for?",
-  "Are you ready to wind down?",
+]
+
+/* ------------------------------------------------------------------ */
+/*  Stress word detection                                               */
+/* ------------------------------------------------------------------ */
+const stressWords = ["stressed", "anxious", "panic", "overwhelmed", "scared", "afraid", "worried", "nervous", "can't breathe", "freaking out", "tense", "dread"]
+
+function detectStress(text: string): boolean {
+  const lower = text.toLowerCase()
+  return stressWords.some((w) => lower.includes(w))
+}
+
+/* ------------------------------------------------------------------ */
+/*  Scavenger Hunt items                                                */
+/* ------------------------------------------------------------------ */
+const scavengerItems = [
+  { id: "blue", prompt: "Find something blue", xp: 10 },
+  { id: "organized", prompt: "Find something organized", xp: 10 },
+  { id: "calm", prompt: "Find something calm", xp: 10 },
+  { id: "nature", prompt: "Find something from nature", xp: 10 },
+  { id: "smile", prompt: "Find something that makes you smile", xp: 15 },
+]
+
+/* ------------------------------------------------------------------ */
+/*  Profile Config                                                      */
+/* ------------------------------------------------------------------ */
+const dietOptions = [
+  { id: "meat", label: "Meat", icon: UtensilsCrossed },
+  { id: "plant", label: "Plant", icon: Leaf },
+  { id: "both", label: "Both", icon: Salad },
+]
+
+const healthGoals = [
+  { id: "energy", label: "Energy" },
+  { id: "routine", label: "Routine" },
+  { id: "mood", label: "Mood" },
+]
+
+const activityLevels = [
+  { id: "mild", label: "Mild" },
+  { id: "moderate", label: "Moderate" },
+  { id: "active", label: "Active" },
+]
+
+const personalStruggles = [
+  { id: "starting", label: "Starting tasks" },
+  { id: "overthinking", label: "Overthinking" },
+  { id: "avoiding", label: "Avoiding hard things" },
+  { id: "forgetting", label: "Forgetting" },
+  { id: "overwhelmed", label: "Feeling overwhelmed" },
 ]
 
 function getTimeGreeting() {
@@ -265,12 +316,36 @@ export default function HomePage() {
   const [worryText, setWorryText] = useState("")
   const [thoughtText, setThoughtText] = useState("")
   const [breathCount, setBreathCount] = useState(0)
-  const [section, setSection] = useState<"home" | "adventures">("home")
+  // section state replaced by activeTab below
   const [friendMsg, setFriendMsg] = useState("")
   const [activeAdventure] = useState("jungle")
   const [showReflection, setShowReflection] = useState<{ title: string; message: string } | null>(null)
   const reflectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /* -- 3-tab nav (Check-In / Journey / Profile) -- */
+  const [activeTab, setActiveTab] = useState<"checkin" | "journey" | "profile">("checkin")
+
+  /* -- My Day auto-log -- */
+  const [myDayLog, setMyDayLog] = useState<{ time: string; label: string }[]>([])
+
+  /* -- Scavenger Hunt -- */
+  const [completedScavenger, setCompletedScavenger] = useState<string[]>([])
+
+  /* -- Stress detection / breathing offer -- */
+  const [showStressBreathing, setShowStressBreathing] = useState(false)
+  const [stressBreathCount, setStressBreathCount] = useState(0)
+
+  /* -- Self-efficacy popup -- */
+  const [showSelfEfficacy, setShowSelfEfficacy] = useState(false)
+  const [tasksCompletedThisWeek] = useState(6)
+
+  /* -- Profile state -- */
+  const [profileDiet, setProfileDiet] = useState("both")
+  const [profileGoals, setProfileGoals] = useState<string[]>(["routine"])
+  const [profileStomach, setProfileStomach] = useState(false)
+  const [profileActivity, setProfileActivity] = useState("moderate")
+  const [profileStruggles, setProfileStruggles] = useState<string[]>(["starting"])
 
   function triggerReflection() {
     const r = getRandomReflection()
@@ -285,12 +360,28 @@ export default function HomePage() {
   const { greeting } = getTimeGreeting()
   const question = getTodayQuestion()
 
+  function addToMyDay(label: string) {
+    const now = new Date()
+    const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    setMyDayLog((prev) => [...prev, { time, label }])
+  }
+
   useEffect(() => {
     if (isRecording) {
       recordTimerRef.current = setTimeout(() => {
         setIsRecording(false)
         setJournalUnlocked(true)
+        addToMyDay("Voice journal completed")
         triggerReflection()
+        // Simulate stress detection (in real app, analyze transcription)
+        if (Math.random() < 0.3) {
+          setShowStressBreathing(true)
+        }
+        // Show self-efficacy popup periodically
+        if (!showSelfEfficacy && myDayLog.length > 0 && myDayLog.length % 3 === 0) {
+          setShowSelfEfficacy(true)
+          setTimeout(() => setShowSelfEfficacy(false), 4000)
+        }
       }, 2000)
     } else if (recordTimerRef.current) {
       clearTimeout(recordTimerRef.current)
@@ -320,19 +411,11 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* -- Tab switcher -- */}
-      <div className="flex shrink-0 items-center gap-1 px-5 pt-1 pb-3">
-        <button onClick={() => setSection("home")} className={`flex-1 rounded-xl py-2 text-sm font-bold transition-colors ${section === "home" ? "bg-[#2E8B57] text-white" : "bg-[#1A2D42] text-[#5A8AAF]"}`}>
-          Journal
-        </button>
-        <button onClick={() => setSection("adventures")} className={`flex-1 rounded-xl py-2 text-sm font-bold transition-colors ${section === "adventures" ? "bg-[#2E8B57] text-white" : "bg-[#1A2D42] text-[#5A8AAF]"}`}>
-          Adventures
-        </button>
-      </div>
+      {/* -- no top tab switcher; bottom nav is used instead -- */}
 
       {/* -- Scrollable Content -- */}
-      <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-6">
-        {section === "home" ? (
+      <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-24">
+        {activeTab === "checkin" ? (
           <>
             {/* -- Greeting -- */}
             <section className="text-center">
@@ -360,6 +443,70 @@ export default function HomePage() {
                   {isRecording ? <Pause className="h-8 w-8 text-white" /> : <Mic className="h-8 w-8 text-white" />}
                 </button>
                 <span className="text-sm font-semibold text-[#5A8AAF]">{isRecording ? "Recording..." : "Hold to record"}</span>
+              </div>
+            </section>
+
+            {/* -- My Day (auto-log of completed tasks) -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">My Day</h2>
+                <ListChecks className="h-4 w-4 text-[#5A8AAF]" />
+              </div>
+              {myDayLog.length === 0 ? (
+                <p className="text-sm text-[#8AA8C7]">Complete activities to see your progress here. Each task is logged automatically.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {myDayLog.map((entry, i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-xl bg-[#1A2D42] p-3">
+                      <span className="text-xs font-bold text-[#5A8AAF]">{entry.time}</span>
+                      <span className="text-sm text-white">{entry.label}</span>
+                      <Check className="ml-auto h-3.5 w-3.5 text-[#2E8B57]" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* -- Scavenger Hunt (Optional XP) -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Scavenger Hunt</h2>
+                <div className="flex items-center gap-1 rounded-full px-3 py-1" style={{ backgroundColor: `${currency.color}15` }}>
+                  <Search className="h-3.5 w-3.5" style={{ color: currency.color }} />
+                  <span className="text-xs font-bold" style={{ color: currency.color }}>
+                    {completedScavenger.length}/{scavengerItems.length}
+                  </span>
+                </div>
+              </div>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Find items around you and upload a photo to earn bonus XP.</p>
+              <div className="flex flex-col gap-2">
+                {scavengerItems.map((item) => {
+                  const done = completedScavenger.includes(item.id)
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        if (!done) {
+                          setCompletedScavenger((prev) => [...prev, item.id])
+                          addToMyDay(`Scavenger: ${item.prompt}`)
+                          triggerReflection()
+                        }
+                      }}
+                      className={`flex items-center gap-3 rounded-2xl p-4 text-left transition-all ${done ? "bg-[#2E8B57]/15 ring-1 ring-[#2E8B57]/30" : "bg-[#1A2D42] hover:scale-[1.01] active:scale-[0.99]"}`}
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: done ? "#2E8B5722" : "#D4872C22" }}>
+                        {done ? <Check className="h-5 w-5 text-[#2E8B57]" /> : <Camera className="h-5 w-5 text-[#D4872C]" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-bold ${done ? "text-[#A8E6B0]" : "text-white"}`}>{item.prompt}</p>
+                        <p className="text-xs text-[#8AA8C7]">Take a photo to prove it!</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${done ? "bg-[#2E8B57]/20 text-[#A8E6B0]" : "bg-[#FFD700]/15 text-[#FFD700]"}`}>
+                        {done ? "Done" : `+${item.xp}`}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </section>
 
@@ -412,17 +559,17 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* -- Boosts (interactive XP activities with prompts + photo upload) -- */}
+            {/* -- Boosts (Only 3-5 visible per day per doc) -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Boosts</h2>
                 <span className="rounded-full bg-[#FFD700]/10 px-3 py-1 text-[10px] font-bold text-[#FFD700]">
-                  {completedBoosts.length}/{boostCategories.length} done
+                  {completedBoosts.length}/5 done
                 </span>
               </div>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Tap a boost for a quick XP activity. Complete the prompt and upload a photo.</p>
-              <div className="grid grid-cols-4 gap-2">
-                {boostCategories.map((boost) => {
+              <p className="mb-3 text-sm text-[#8AA8C7]">Tap a boost for a quick XP activity. 5 boosts available today.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {boostCategories.slice(new Date().getDate() % 7, (new Date().getDate() % 7) + 5).map((boost) => {
                   const done = completedBoosts.includes(boost.id)
                   return (
                     <button
@@ -444,7 +591,59 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* -- Fuel Check -- */}
+            {/* -- Schedule the Joy (belongs in Check-In per doc) -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Schedule the Joy</h2>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Choose one enjoyable activity, choose a time, and get a reminder. Completion earns XP. Optional image proof.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {["Go for a walk", "Cook something fun", "Call a friend", "Read a book"].map((act) => (
+                  <button
+                    key={act}
+                    onClick={() => {
+                      addToMyDay(`Scheduled joy: ${act}`)
+                      triggerReflection()
+                    }}
+                    className="rounded-xl bg-[#1A2D42] px-3 py-3 text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95"
+                  >
+                    {act}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* -- Meditation (per doc, part of Check-In calm UI) -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Meditation Break</h2>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Choose a character and take a guided breathing break.</p>
+              <Button onClick={() => setShowMeditation(true)} variant="outline" className="w-full rounded-xl border-[#DDA0DD]/40 bg-transparent text-[#DDA0DD] hover:bg-[#DDA0DD]/10">
+                <Sparkles className="mr-2 h-4 w-4" /> Meditate
+              </Button>
+            </section>
+          </>
+        ) : activeTab === "journey" ? (
+          /* -- Journey Tab (Adventures + Today's Quest + Fuel + Movement) -- */
+          <>
+            <section className="text-center">
+              <h1 className="text-2xl font-extrabold tracking-tight text-white text-balance">Your Journey</h1>
+              <p className="mt-1 text-sm text-[#8AA8C7]">Choose a landscape and start your quest.</p>
+            </section>
+
+            {/* Today's Quest */}
+            {journalUnlocked && (
+              <section className="rounded-3xl bg-[#13263A] p-5">
+                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">{"Today's Quest"}</h2>
+                <div className="mb-3 rounded-2xl bg-[#1A2D42] p-4">
+                  <p className="mb-1 text-sm font-bold text-[#FFD700]">Riddle of the Day</p>
+                  <p className="text-base leading-relaxed text-white">{"I have cities but no houses, forests but no trees, and water but no fish. What am I?"}</p>
+                  <p className="mt-2 text-xs text-[#5A8AAF]">Answer: A map! Now begin your quest.</p>
+                </div>
+                <Link href="/jungle" className="flex items-center justify-center gap-2 rounded-xl bg-[#2E8B57] px-4 py-3 font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                  <MapPin className="h-5 w-5" /> Go to My Map
+                </Link>
+              </section>
+            )}
+
+            {/* Fuel Check */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Fuel Check</h2>
@@ -455,7 +654,7 @@ export default function HomePage() {
                 )}
               </div>
               <p className="mb-4 text-sm text-[#8AA8C7]">
-                {fuelDone ? "Great job fueling up today!" : "Have you eaten today? Tap below to check in."}
+                {fuelDone ? "Great job fueling up today!" : "Have you eaten today? Upload image of food or water. No image = half XP."}
               </p>
               {!fuelDone ? (
                 <button
@@ -477,50 +676,20 @@ export default function HomePage() {
                     <p className="text-sm font-bold text-[#A8E6B0]">Fuel logged for today</p>
                     <p className="text-xs text-[#8AA8C7]">+15 {currency.name} earned</p>
                   </div>
-                  <button
-                    onClick={() => { setFuelStep("choice"); setShowFuelModal(true) }}
-                    className="rounded-lg bg-[#1A2D42] px-3 py-1.5 text-xs font-bold text-[#8AA8C7] transition-colors hover:bg-[#243B55]"
-                  >
-                    Log again
-                  </button>
                 </div>
               )}
             </section>
 
-            {/* -- Today's Quest -- */}
-            {journalUnlocked && (
-              <section className="rounded-3xl bg-[#13263A] p-5">
-                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">{"Today's Quest"}</h2>
-                <div className="mb-3 rounded-2xl bg-[#1A2D42] p-4">
-                  <p className="mb-1 text-sm font-bold text-[#FFD700]">Riddle of the Day</p>
-                  <p className="text-base leading-relaxed text-white">{"I have cities but no houses, forests but no trees, and water but no fish. What am I?"}</p>
-                  <p className="mt-2 text-xs text-[#5A8AAF]">Answer: A map! Now begin your quest.</p>
-                </div>
-                <Link href="/jungle" className="flex items-center justify-center gap-2 rounded-xl bg-[#2E8B57] px-4 py-3 font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]">
-                  <MapPin className="h-5 w-5" /> Go to My Map
-                </Link>
-              </section>
-            )}
-
-            {/* -- Movement & Exercise -- */}
+            {/* Movement */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Movement & Exercise</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Outdoor walks earn chips. Indoor workouts are character-led.</p>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Outdoor walks earn chips. Indoor workouts are character-led. Movement contributes to fuel.</p>
               <Button onClick={() => setShowMovement(true)} className="w-full rounded-xl bg-[#FF6B35] text-white hover:bg-[#E05A28]">
                 <Dumbbell className="mr-2 h-4 w-4" /> Start Moving
               </Button>
             </section>
 
-            {/* -- Recipes & Fuel Cooking -- */}
-            <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Fuel: Recipes</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Make your own recipes. Want to eat your hard work or try a meal kit?</p>
-              <Button onClick={() => setShowRecipes(true)} variant="outline" className="w-full rounded-xl border-[#2E8B57]/40 bg-transparent text-[#A8E6B0] hover:bg-[#2E8B57]/10">
-                <ChefHat className="mr-2 h-4 w-4" /> Browse Recipes
-              </Button>
-            </section>
-
-            {/* -- Roadblock Skills -- */}
+            {/* Roadblock Skills */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Roadblock Skills</h2>
               <div className="flex flex-col gap-2">
@@ -547,31 +716,157 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* -- Meditation -- */}
-            <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Meditation Break</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Choose a character and take a guided breathing break.</p>
-              <Button onClick={() => setShowMeditation(true)} variant="outline" className="w-full rounded-xl border-[#DDA0DD]/40 bg-transparent text-[#DDA0DD] hover:bg-[#DDA0DD]/10">
-                <Sparkles className="mr-2 h-4 w-4" /> Meditate
-              </Button>
+            {/* Choose Adventure */}
+            <section>
+              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Choose Your Adventure</h2>
+              <div className="flex flex-col gap-3">
+                {adventures.map((adv) => {
+                  const advCurrency = xpCurrencies[adv.id]
+                  return (
+                    <Link key={adv.id} href={adv.href} className={`group flex items-center gap-4 rounded-2xl bg-gradient-to-r ${adv.gradient} border ${adv.border} p-4 transition-transform hover:scale-[1.02] active:scale-[0.98]`}>
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${adv.iconBg}`}>
+                        <LandscapeIcon id={adv.id} />
+                      </div>
+                      <div className="flex flex-1 flex-col">
+                        <span className="text-base font-bold text-white">{adv.name}</span>
+                        <span className={`text-sm ${adv.textColor}`}>{adv.tagline}</span>
+                      </div>
+                      {advCurrency && (
+                        <div className="flex items-center gap-1">
+                          {advCurrency.icon}
+                          <span className="text-xs font-bold" style={{ color: advCurrency.color }}>{advCurrency.name}</span>
+                        </div>
+                      )}
+                      <ChevronRight className="h-5 w-5 text-white/50 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  )
+                })}
+              </div>
+            </section>
+          </>
+        ) : (
+          /* -- Profile Tab -- */
+          <>
+            <section className="text-center">
+              <h1 className="text-2xl font-extrabold tracking-tight text-white text-balance">Your Profile</h1>
+              <p className="mt-1 text-sm text-[#8AA8C7]">Personalize your experience.</p>
             </section>
 
-            {/* -- Milestone Check-In -- */}
+            {/* Health Preferences */}
             <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Milestone Check-In</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Weekly and monthly reflections to stay on track.</p>
-              <Button onClick={() => setShowMilestone(true)} variant="outline" className="w-full rounded-xl border-[#FFD700]/40 bg-transparent text-[#FFD700] hover:bg-[#FFD700]/10">
-                <CalendarCheck className="mr-2 h-4 w-4" /> Check In
-              </Button>
+              <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Health Preferences</h2>
+
+              {/* Diet */}
+              <div className="mb-5">
+                <p className="mb-2 text-sm font-bold text-white">Diet</p>
+                <div className="flex gap-2">
+                  {dietOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setProfileDiet(opt.id)}
+                      className={`flex flex-1 flex-col items-center gap-2 rounded-2xl p-4 transition-all ${profileDiet === opt.id ? "bg-[#2E8B57]/20 ring-2 ring-[#2E8B57]" : "bg-[#1A2D42] hover:scale-[1.02]"}`}
+                    >
+                      <opt.icon className={`h-6 w-6 ${profileDiet === opt.id ? "text-[#A8E6B0]" : "text-[#5A8AAF]"}`} />
+                      <span className={`text-xs font-bold ${profileDiet === opt.id ? "text-[#A8E6B0]" : "text-white"}`}>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Health Goals */}
+              <div className="mb-5">
+                <p className="mb-2 text-sm font-bold text-white">Health Goals</p>
+                <div className="flex flex-wrap gap-2">
+                  {healthGoals.map((goal) => {
+                    const selected = profileGoals.includes(goal.id)
+                    return (
+                      <button
+                        key={goal.id}
+                        onClick={() => setProfileGoals((prev) => selected ? prev.filter((g) => g !== goal.id) : [...prev, goal.id])}
+                        className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${selected ? "bg-[#2E8B57] text-white" : "bg-[#1A2D42] text-[#8AA8C7] hover:bg-[#243B55]"}`}
+                      >
+                        {goal.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Stomach Sensitivity */}
+              <div className="mb-5">
+                <p className="mb-2 text-sm font-bold text-white">Stomach Sensitivity</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setProfileStomach(true)}
+                    className={`flex-1 rounded-xl py-3 text-sm font-bold transition-all ${profileStomach ? "bg-[#D4872C]/20 ring-2 ring-[#D4872C] text-[#FFD699]" : "bg-[#1A2D42] text-[#8AA8C7]"}`}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setProfileStomach(false)}
+                    className={`flex-1 rounded-xl py-3 text-sm font-bold transition-all ${!profileStomach ? "bg-[#2E8B57]/20 ring-2 ring-[#2E8B57] text-[#A8E6B0]" : "bg-[#1A2D42] text-[#8AA8C7]"}`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+
+              {/* Activity Level */}
+              <div>
+                <p className="mb-2 text-sm font-bold text-white">Activity Level</p>
+                <div className="flex gap-2">
+                  {activityLevels.map((level) => (
+                    <button
+                      key={level.id}
+                      onClick={() => setProfileActivity(level.id)}
+                      className={`flex-1 rounded-xl py-3 text-sm font-bold transition-all ${profileActivity === level.id ? "bg-[#FF6B35]/20 ring-2 ring-[#FF6B35] text-[#FF6B35]" : "bg-[#1A2D42] text-[#8AA8C7]"}`}
+                    >
+                      {level.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </section>
 
-            {/* Schedule the Joy */}
+            {/* Personal Struggles */}
             <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Schedule the Joy</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Pick a fun activity, schedule it, and take a photo when you do it.</p>
-              <div className="grid grid-cols-2 gap-2">
-                {["Go for a walk", "Cook something fun", "Call a friend", "Read a book"].map((act) => (
-                  <button key={act} className="rounded-xl bg-[#1A2D42] px-3 py-3 text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95">{act}</button>
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Personal Struggles</h2>
+              <p className="mb-3 text-sm text-[#8AA8C7]">{"\"I struggle most with:\""} This personalizes your quest difficulty, prompt tone, and roadblocks.</p>
+              <div className="flex flex-col gap-2">
+                {personalStruggles.map((s) => {
+                  const selected = profileStruggles.includes(s.id)
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setProfileStruggles((prev) => selected ? prev.filter((x) => x !== s.id) : [...prev, s.id])}
+                      className={`flex items-center gap-3 rounded-2xl p-4 text-left transition-all ${selected ? "bg-[#2E8B57]/15 ring-1 ring-[#2E8B57]/40" : "bg-[#1A2D42] hover:scale-[1.01]"}`}
+                    >
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-[#2E8B57]/20" : "bg-[#E84535]/15"}`}>
+                        {selected ? <Check className="h-5 w-5 text-[#2E8B57]" /> : <CircleAlert className="h-5 w-5 text-[#E84535]" />}
+                      </div>
+                      <span className={`text-sm font-bold ${selected ? "text-[#A8E6B0]" : "text-white"}`}>{s.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            {/* Reminders */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Reminders</h2>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Max 3 reminders per day. Choose your frequency.</p>
+              <div className="flex flex-col gap-2">
+                {[
+                  { time: "Morning", label: "Start your check-in", active: true },
+                  { time: "Midday", label: "Have you completed today's quest?", active: true },
+                  { time: "Evening", label: "Review your day", active: true },
+                ].map((r, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-xl bg-[#1A2D42] p-4">
+                    <Bell className="h-4 w-4 text-[#FF9F43]" />
+                    <span className="w-16 text-xs font-bold text-[#FF9F43]">{r.time}</span>
+                    <span className="flex-1 text-sm text-white">{r.label}</span>
+                    <div className={`h-3 w-3 rounded-full ${r.active ? "bg-[#2E8B57]" : "bg-[#5A8AAF]"}`} />
+                  </div>
                 ))}
               </div>
             </section>
@@ -579,56 +874,56 @@ export default function HomePage() {
             {/* Find Your Ikigai */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Find Your Ikigai</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">End-of-month exploration. Discover hobbies, readings, podcasts, and outdoor activities.</p>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Long-term planning. Discover hobbies, readings, podcasts, and outdoor activities.</p>
               <div className="flex flex-wrap gap-2">
                 {["Hobbies", "Readings", "Podcasts", "Outdoors"].map((tag) => (
-                  <span key={tag} className="rounded-full bg-[#1A2D42] px-3 py-1.5 text-xs font-bold text-[#A8E6B0]">{tag}</span>
+                  <span key={tag} className="rounded-full bg-[#1A2D42] px-4 py-2 text-sm font-bold text-[#A8E6B0]">{tag}</span>
                 ))}
               </div>
             </section>
 
-            {/* -- Reminders -- */}
+            {/* Milestone Check-In */}
             <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Reminders</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Stay on track with scheduled prompts and task reminders.</p>
-              <Button onClick={() => setShowReminders(true)} variant="outline" className="w-full rounded-xl border-[#FF9F43]/40 bg-transparent text-[#FF9F43] hover:bg-[#FF9F43]/10">
-                <Bell className="mr-2 h-4 w-4" /> View Reminders
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Milestone Check-In</h2>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Weekly and monthly reflections to stay on track.</p>
+              <Button onClick={() => setShowMilestone(true)} variant="outline" className="w-full rounded-xl border-[#FFD700]/40 bg-transparent text-[#FFD700] hover:bg-[#FFD700]/10">
+                <CalendarCheck className="mr-2 h-4 w-4" /> Check In
               </Button>
-            </section>
-          </>
-        ) : (
-          /* -- Adventures Grid -- */
-          <>
-            <section className="text-center">
-              <h1 className="text-2xl font-extrabold tracking-tight text-white text-balance">Choose Your Adventure</h1>
-              <p className="mt-1 text-sm text-[#8AA8C7]">Each landscape is a new world to explore.</p>
-            </section>
-            <section className="flex flex-col gap-3">
-              {adventures.map((adv) => {
-                const advCurrency = xpCurrencies[adv.id]
-                return (
-                  <Link key={adv.id} href={adv.href} className={`group flex items-center gap-4 rounded-2xl bg-gradient-to-r ${adv.gradient} border ${adv.border} p-4 transition-transform hover:scale-[1.02] active:scale-[0.98]`}>
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${adv.iconBg}`}>
-                      <LandscapeIcon id={adv.id} />
-                    </div>
-                    <div className="flex flex-1 flex-col">
-                      <span className="text-base font-bold text-white">{adv.name}</span>
-                      <span className={`text-sm ${adv.textColor}`}>{adv.tagline}</span>
-                    </div>
-                    {advCurrency && (
-                      <div className="flex items-center gap-1">
-                        {advCurrency.icon}
-                        <span className="text-xs font-bold" style={{ color: advCurrency.color }}>{advCurrency.name}</span>
-                      </div>
-                    )}
-                    <ChevronRight className="h-5 w-5 text-white/50 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                )
-              })}
             </section>
           </>
         )}
       </main>
+
+      {/* ---- Bottom Tab Navigation (3 tabs per doc) ---- */}
+      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-[#1A2D42] bg-[#0C1B2A]/95 backdrop-blur-md" aria-label="Main navigation">
+        <button
+          onClick={() => setActiveTab("checkin")}
+          className="flex flex-1 flex-col items-center gap-1 py-3 transition-colors"
+          style={{ color: activeTab === "checkin" ? "#2E8B57" : "#5A8AAF" }}
+          aria-current={activeTab === "checkin" ? "page" : undefined}
+        >
+          <Mic className="h-5 w-5" />
+          <span className="text-[10px] font-bold">Check-In</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("journey")}
+          className="flex flex-1 flex-col items-center gap-1 py-3 transition-colors"
+          style={{ color: activeTab === "journey" ? "#FFD700" : "#5A8AAF" }}
+          aria-current={activeTab === "journey" ? "page" : undefined}
+        >
+          <MapPin className="h-5 w-5" />
+          <span className="text-[10px] font-bold">Journey</span>
+        </button>
+        <button
+          onClick={() => setActiveTab("profile")}
+          className="flex flex-1 flex-col items-center gap-1 py-3 transition-colors"
+          style={{ color: activeTab === "profile" ? "#FF9F43" : "#5A8AAF" }}
+          aria-current={activeTab === "profile" ? "page" : undefined}
+        >
+          <User className="h-5 w-5" />
+          <span className="text-[10px] font-bold">Profile</span>
+        </button>
+      </nav>
 
       {/* ---- MODALS ---- */}
 
@@ -973,27 +1268,80 @@ export default function HomePage() {
         <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-white"><Bell className="h-5 w-5 text-[#FF9F43]" /> Reminders</DialogTitle>
-            <DialogDescription className="text-sm text-[#8AA8C7]">Scheduled prompts to keep you on track.</DialogDescription>
+            <DialogDescription className="text-sm text-[#8AA8C7]">Max 3 per day. User chooses reminder frequency.</DialogDescription>
           </DialogHeader>
           <div className="mt-3 flex flex-col gap-2">
             {[
-              { time: "9:00 AM", label: "Morning journal entry", active: true },
-              { time: "12:00 PM", label: "Have you completed your task of the day?", active: true },
-              { time: "3:00 PM", label: "Afternoon check-in: Water? Stretch?", active: true },
-              { time: "6:00 PM", label: "Did you schedule the joy?", active: false },
-              { time: "9:00 PM", label: "Evening reflection", active: true },
-              { time: "Sunday", label: "End of week: Set up weekly schedule?", active: true },
-              { time: "Month End", label: "Find your ikigai", active: true },
+              { time: "Morning", label: "Start your check-in.", active: true },
+              { time: "Midday", label: "Have you completed today's quest?", active: true },
+              { time: "Evening", label: "Review your day.", active: true },
             ].map((r, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-xl bg-[#1A2D42] p-3">
+              <div key={i} className="flex items-center gap-3 rounded-xl bg-[#1A2D42] p-4">
+                <Bell className="h-4 w-4 text-[#FF9F43]" />
                 <span className="w-16 text-xs font-bold text-[#FF9F43]">{r.time}</span>
                 <span className="flex-1 text-sm text-white">{r.label}</span>
-                <div className={`h-2.5 w-2.5 rounded-full ${r.active ? "bg-[#2E8B57]" : "bg-[#5A8AAF]"}`} />
+                <div className={`h-3 w-3 rounded-full ${r.active ? "bg-[#2E8B57]" : "bg-[#5A8AAF]"}`} />
               </div>
             ))}
           </div>
+          <p className="mt-2 text-center text-xs text-[#5A8AAF]">Tap a reminder to toggle on/off. Max 3 active.</p>
         </DialogContent>
       </Dialog>
+
+      {/* ---- Stress-Detected Breathing Ritual ---- */}
+      <Dialog open={showStressBreathing} onOpenChange={setShowStressBreathing}>
+        <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6 text-center">
+          <DialogHeader className="flex flex-col items-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#4ECDC4]/20">
+              <Wind className="h-8 w-8 text-[#4ECDC4]" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-white">Stress Detected</DialogTitle>
+            <DialogDescription className="text-sm text-[#8AA8C7]">
+              We noticed some stress in your check-in. Take a quick breathing break before your quest.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <div className={`flex h-28 w-28 items-center justify-center rounded-full transition-all duration-1000 ${stressBreathCount % 2 === 0 ? "scale-100 bg-[#4ECDC4]/20" : "scale-125 bg-[#4ECDC4]/40"}`}>
+              <span className="text-lg font-bold text-[#4ECDC4]">{stressBreathCount % 2 === 0 ? "Breathe In" : "Breathe Out"}</span>
+            </div>
+            <Button
+              onClick={() => {
+                setStressBreathCount((c) => c + 1)
+                if (stressBreathCount >= 5) {
+                  setShowStressBreathing(false)
+                  setStressBreathCount(0)
+                  addToMyDay("Breathing ritual completed")
+                  triggerReflection()
+                }
+              }}
+              className="rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]"
+            >
+              <Wind className="mr-2 h-4 w-4" /> {stressBreathCount === 0 ? "Start Breathing" : stressBreathCount >= 5 ? "Done!" : `Next (${stressBreathCount}/6)`}
+            </Button>
+            <button onClick={() => { setShowStressBreathing(false); setStressBreathCount(0) }} className="text-xs text-[#5A8AAF] hover:text-white">
+              Skip for now
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---- Self-Efficacy Progress Popup (per doc: private progress tracker) ---- */}
+      {showSelfEfficacy && (
+        <div className="pointer-events-none fixed inset-0 z-[99] flex items-start justify-center pt-24">
+          <button
+            onClick={() => setShowSelfEfficacy(false)}
+            className="pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-500 flex items-center gap-3 rounded-2xl bg-[#1A2D42] px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.4)] ring-1 ring-[#2E8B57]/30"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#2E8B57]/20">
+              <ListChecks className="h-6 w-6 text-[#2E8B57]" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-white">You completed {tasksCompletedThisWeek} adult tasks this week.</p>
+              <p className="text-xs text-[#8AA8C7]">Keep building. Every step counts.</p>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* ---- Positive Reflection Popup ---- */}
       {showReflection && (

@@ -14,8 +14,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'TC-Living',
-  description: 'Therapeutic Companion for Living - Client and Therapist Portal',
+  title: 'Pulse - Become an Explorer Outside the App',
+  description: 'Pulse is an adventure-based daily implementation system. Growth in real life unlocks progress in the app.',
 }
 
 export const viewport: Viewport = {
