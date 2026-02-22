@@ -2,23 +2,40 @@
 
 import { useState, useEffect, useRef } from "react"
 import {
-  Coins, Flame, Mic, Pause, ChevronRight, MapPin,
-  Droplets, Wind, StretchHorizontal, Camera, Package, Lock,
-  CalendarCheck, Sparkles, Heart, Search, AlertTriangle, Brain,
+  Flame, Mic, Pause, ChevronRight, MapPin,
+  Wind, Camera, Package, Lock,
+  CalendarCheck, Sparkles, Heart, Brain,
   Trash2, Gem, Trophy, Users, Dumbbell, ChefHat, Bell,
   MessageCircle, Send, Footprints, PersonStanding, Star,
   Music, Image, PenLine, Zap, Smile, Palette, BookOpen,
   HandMetal, Shield, Bike, BrainCircuit, Gauge, HeartHandshake,
-  UtensilsCrossed, Clock, Check, ArrowLeft
+  UtensilsCrossed, Clock, Check, ArrowLeft, Phone, Pencil,
+  Puzzle, Eye, Gamepad2, Megaphone
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
 
-/* -- Time-based question cycling -- */
+/* ------------------------------------------------------------------ */
+/*  XP Currency per adventure                                          */
+/* ------------------------------------------------------------------ */
+const xpCurrencies: Record<string, { name: string; icon: React.ReactNode; color: string }> = {
+  jungle:     { name: "Bananas",    icon: <span className="text-lg leading-none">{"🍌"}</span>, color: "#FFD700" },
+  savannah:   { name: "Acorns",     icon: <span className="text-lg leading-none">{"🌰"}</span>, color: "#D4872C" },
+  ocean:      { name: "Sea Shells", icon: <span className="text-lg leading-none">{"🐚"}</span>, color: "#1E90FF" },
+  desert:     { name: "Scarabs",    icon: <span className="text-lg leading-none">{"🪲"}</span>, color: "#E8A435" },
+  mountains:  { name: "Crystals",   icon: <span className="text-lg leading-none">{"💎"}</span>, color: "#7F9BAA" },
+  antarctica: { name: "Snowflakes", icon: <span className="text-lg leading-none">{"❄️"}</span>, color: "#89CFF0" },
+  volcano:    { name: "Embers",     icon: <span className="text-lg leading-none">{"🔥"}</span>, color: "#E84535" },
+  city:       { name: "Tokens",     icon: <span className="text-lg leading-none">{"🪙"}</span>, color: "#8080FF" },
+  atlantis:   { name: "Pearls",     icon: <span className="text-lg leading-none">{"🫧"}</span>, color: "#00CED1" },
+}
+
+/* ------------------------------------------------------------------ */
+/*  Time-based question cycling                                        */
+/* ------------------------------------------------------------------ */
 const morningQs = [
   "What are you excited for today?",
   "What is for breakfast?",
@@ -52,7 +69,9 @@ function getTodayQuestion() {
   return qs[day % qs.length]
 }
 
-/* -- Adventures config -- */
+/* ------------------------------------------------------------------ */
+/*  Adventures config                                                   */
+/* ------------------------------------------------------------------ */
 const adventures = [
   { id: "jungle", name: "Jungle", tagline: "Swing through the canopy", href: "/jungle", gradient: "from-[#0D3B1E] to-[#1A5C30]", border: "border-[#2E8B57]/40", iconBg: "bg-[#2E8B57]", textColor: "text-[#A8E6B0]", accent: "#2E8B57" },
   { id: "savannah", name: "Savannah", tagline: "Roam the golden plains", href: "/savannah", gradient: "from-[#5A3200] to-[#8B6914]", border: "border-[#D4872C]/40", iconBg: "bg-[#D4872C]", textColor: "text-[#FFD699]", accent: "#D4872C" },
@@ -119,8 +138,8 @@ function getMealSuggestions() {
 /* -- Roadblock exercises -- */
 const roadblocks = [
   { id: "breathe", label: "Time to Breathe", desc: "Blow away the boulder with deep breaths", icon: Wind, color: "#4ECDC4" },
-  { id: "stretch", label: "Time to Stretch", desc: "Stretch your way around the boulder", icon: StretchHorizontal, color: "#FF9F43" },
-  { id: "water", label: "Drink Water", desc: "Wash the boulder away with hydration", icon: Droplets, color: "#1E90FF" },
+  { id: "stretch", label: "Time to Stretch", desc: "Stretch your way around the boulder", icon: HeartHandshake, color: "#FF9F43" },
+  { id: "water", label: "Drink Water", desc: "Wash the boulder away with hydration", icon: Heart, color: "#1E90FF" },
 ]
 
 /* -- Meditation characters -- */
@@ -133,13 +152,13 @@ const meditationCharacters = [
   { id: "sorcerist", label: "Sorcerist", color: "#E84535" },
 ]
 
-/* -- Leaderboard mock data -- */
+/* -- Leaderboard mock data (with adventure & themed XP) -- */
 const leaderboard = [
-  { name: "You", coins: 240, rank: 3 },
-  { name: "Alex R.", coins: 410, rank: 1 },
-  { name: "Jordan L.", coins: 310, rank: 2 },
-  { name: "Sam N.", coins: 195, rank: 4 },
-  { name: "Taylor B.", coins: 120, rank: 5 },
+  { name: "You",       xp: 240, rank: 3, adventure: "jungle" },
+  { name: "Alex R.",   xp: 410, rank: 1, adventure: "ocean" },
+  { name: "Jordan L.", xp: 310, rank: 2, adventure: "desert" },
+  { name: "Sam N.",    xp: 195, rank: 4, adventure: "savannah" },
+  { name: "Taylor B.", xp: 120, rank: 5, adventure: "antarctica" },
 ]
 
 /* -- Premade emotes/messages -- */
@@ -154,27 +173,38 @@ const extraXpItems = [
   { id: "social", label: "Socialization", desc: "+10 XP send a preset message", xp: 10, icon: MessageCircle, color: "#FFD700" },
 ]
 
-/* -- Boost categories -- */
+/* -- Boost categories (each is an XP activity with prompt + photo) -- */
 const boostCategories = [
-  { id: "body", label: "Body", icon: HeartHandshake, color: "#FF6B35" },
-  { id: "joy", label: "Joy", icon: Smile, color: "#FFD700" },
-  { id: "creativity", label: "Creativity", icon: Palette, color: "#DDA0DD" },
-  { id: "brain", label: "Brain", icon: Brain, color: "#1E90FF" },
-  { id: "life", label: "Life", icon: Star, color: "#2E8B57" },
-  { id: "social", label: "Social", icon: Users, color: "#FF9F43" },
-  { id: "scavenger", label: "Scavenger", icon: Search, color: "#4ECDC4" },
-  { id: "confidence", label: "Confidence", icon: Shield, color: "#E84535" },
-  { id: "movement", label: "Movement", icon: Bike, color: "#FF6B35" },
-  { id: "creative", label: "Creative", icon: Sparkles, color: "#CD7F32" },
-  { id: "skills", label: "Skills", icon: HandMetal, color: "#8080FF" },
-  { id: "exec-function", label: "Exec Function", icon: BrainCircuit, color: "#7F9BAA" },
-  { id: "regulation", label: "Regulation", icon: Gauge, color: "#9B59B6" },
+  { id: "body",          label: "Body",           icon: HeartHandshake, color: "#FF6B35",
+    prompts: ["Do 10 jumping jacks", "Hold a plank for 20 seconds", "Stretch for 5 minutes", "Do a quick yoga pose"] },
+  { id: "joy",           label: "Joy",            icon: Smile,          color: "#FFD700",
+    prompts: ["Dance to your favorite song", "Watch something that makes you laugh", "Smile at yourself in the mirror"] },
+  { id: "creativity",    label: "Creativity",     icon: Palette,        color: "#DDA0DD",
+    prompts: ["Draw something and take a photo", "Write a short poem", "Build something with what you have around you"] },
+  { id: "brain",         label: "Brain",          icon: Brain,          color: "#1E90FF",
+    prompts: ["Solve a riddle", "Name 5 countries in 10 seconds", "Count backwards from 100 by 7s", "Do a word search"] },
+  { id: "life",          label: "Life",           icon: Star,           color: "#2E8B57",
+    prompts: ["Organize one drawer", "Write down 3 goals", "Plan tomorrow morning tonight"] },
+  { id: "social",        label: "Social",         icon: Users,          color: "#FF9F43",
+    prompts: ["Call someone you care about", "Send a kind text message", "Say hi to a stranger", "Compliment someone today"] },
+  { id: "confidence",    label: "Confidence",     icon: Shield,         color: "#E84535",
+    prompts: ["Say 3 things you like about yourself", "Try something new today", "Stand tall for 2 minutes (power pose)"] },
+  { id: "movement",      label: "Movement",       icon: Bike,           color: "#FF6B35",
+    prompts: ["Walk around the block", "Do 20 squats", "Go up and down stairs 3 times", "Dance for 3 minutes"] },
+  { id: "creative",      label: "Creative",       icon: Sparkles,       color: "#CD7F32",
+    prompts: ["Take a photo of something beautiful", "Doodle for 5 minutes", "Make up a story about an animal"] },
+  { id: "skills",        label: "Skills",         icon: HandMetal,      color: "#8080FF",
+    prompts: ["Tie a new knot", "Learn a new word", "Practice a skill for 5 minutes"] },
+  { id: "exec-function", label: "Exec Function",  icon: BrainCircuit,   color: "#7F9BAA",
+    prompts: ["Make a to-do list for today", "Set 3 timers for tasks", "Prioritize your top 3 tasks"] },
+  { id: "regulation",    label: "Regulation",     icon: Gauge,          color: "#9B59B6",
+    prompts: ["Rate your mood 1-10", "Do box breathing (4-4-4-4)", "Name the emotion you are feeling right now"] },
 ]
 
 /* -- Workout routines -- */
 const outdoorActivities = [
   { label: "Collective Walk", desc: "Walk 20 min and earn chips", icon: Footprints, reward: "walking chips" },
-  { label: "Outdoor Jog", desc: "Jog around the block", icon: PersonStanding, reward: "movement coins" },
+  { label: "Outdoor Jog", desc: "Jog around the block", icon: PersonStanding, reward: "movement XP" },
 ]
 const indoorWorkouts = [
   { label: "Explorer Workout", desc: "Follow along with Explorer", char: "Explorer" },
@@ -190,6 +220,9 @@ const recipes = [
   { id: "wrap", name: "Chicken Wrap", desc: "Grilled chicken, lettuce, tomato, tortilla", difficulty: "Medium" },
 ]
 
+/* ================================================================== */
+/*  HomePage Component                                                  */
+/* ================================================================== */
 export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [journalUnlocked, setJournalUnlocked] = useState(false)
@@ -199,33 +232,29 @@ export default function HomePage() {
   const [showWorryBox, setShowWorryBox] = useState(false)
   const [showRoadblock, setShowRoadblock] = useState<typeof roadblocks[0] | null>(null)
   const [showThoughtSorter, setShowThoughtSorter] = useState(false)
-  const [showScavengerHunt, setShowScavengerHunt] = useState(false)
   const [showMeditation, setShowMeditation] = useState(false)
   const [showMilestone, setShowMilestone] = useState(false)
-  const [showTrigger, setShowTrigger] = useState(false)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [showMovement, setShowMovement] = useState(false)
   const [showRecipes, setShowRecipes] = useState(false)
-  const [showFriendConnect, setShowFriendConnect] = useState(false)
   const [showReminders, setShowReminders] = useState(false)
-  const [showExtraXp, setShowExtraXp] = useState(false)
-  const [showBoosts, setShowBoosts] = useState(false)
   const [completedXp, setCompletedXp] = useState<string[]>([])
-  const [activeBoost, setActiveBoost] = useState<string | null>(null)
+  const [showBoostModal, setShowBoostModal] = useState<typeof boostCategories[0] | null>(null)
+  const [completedBoosts, setCompletedBoosts] = useState<string[]>([])
   const [selectedMedChar, setSelectedMedChar] = useState(meditationCharacters[0].id)
   const [worryText, setWorryText] = useState("")
   const [thoughtText, setThoughtText] = useState("")
   const [breathCount, setBreathCount] = useState(0)
   const [section, setSection] = useState<"home" | "adventures">("home")
   const [friendMsg, setFriendMsg] = useState("")
+  const [activeAdventure] = useState("jungle")
   const recordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const coins = 240
+  const xp = 240
   const streak = 5
-  const fuelLevel = 65
+  const currency = xpCurrencies[activeAdventure] ?? xpCurrencies.jungle
   const { greeting } = getTimeGreeting()
   const question = getTodayQuestion()
-  const activeAdventure = adventures[0]
 
   useEffect(() => {
     if (isRecording) {
@@ -243,18 +272,20 @@ export default function HomePage() {
     <div className="flex h-dvh flex-col bg-[#0C1B2A]">
       {/* -- Top Bar -- */}
       <header className="flex shrink-0 items-center justify-between px-5 pt-5 pb-2">
-        <div className="flex items-center gap-2 rounded-full bg-[#1A2D42] px-4 py-2">
-          <Coins className="h-5 w-5 text-[#FFD700]" />
-          <span className="text-base font-bold text-[#FFD700]">{coins}</span>
+        {/* Adventure-themed currency */}
+        <div className="flex items-center gap-2 rounded-full bg-[#1A2D42] px-4 py-2" style={{ borderLeft: `3px solid ${currency.color}` }}>
+          {currency.icon}
+          <span className="text-base font-bold" style={{ color: currency.color }}>{xp}</span>
+          <span className="text-[10px] font-semibold text-[#5A8AAF]">{currency.name}</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button onClick={() => setShowLeaderboard(true)} className="flex items-center gap-1.5 rounded-full bg-[#1A2D42] px-3 py-2 transition-colors hover:bg-[#243B55]" aria-label="Leaderboard">
             <Trophy className="h-4 w-4 text-[#FFD700]" />
             <span className="text-xs font-bold text-[#FFD700]">{"#3"}</span>
           </button>
-          <div className="flex items-center gap-2 rounded-full bg-[#1A2D42] px-4 py-2">
-            <Flame className="h-5 w-5 text-[#FF6B35]" />
-            <span className="text-base font-bold text-[#FF6B35]">{streak}d</span>
+          <div className="flex items-center gap-2 rounded-full bg-[#1A2D42] px-3 py-2">
+            <Flame className="h-4 w-4 text-[#FF6B35]" />
+            <span className="text-sm font-bold text-[#FF6B35]">{streak}d</span>
           </div>
         </div>
       </header>
@@ -273,18 +304,6 @@ export default function HomePage() {
       <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-6">
         {section === "home" ? (
           <>
-            {/* -- Friend Connection Banner -- */}
-            <button onClick={() => setShowFriendConnect(true)} className="flex items-center gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-transform hover:scale-[1.01] active:scale-[0.99]">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2E8B57]/20">
-                <MessageCircle className="h-5 w-5 text-[#2E8B57]" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-white">Friend Connection</p>
-                <p className="text-xs text-[#8AA8C7]">Send a cheer to someone on the leaderboard</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-[#5A8AAF]" />
-            </button>
-
             {/* -- Greeting -- */}
             <section className="text-center">
               <h1 className="text-3xl font-extrabold tracking-tight text-white text-balance">{greeting}, Explorer</h1>
@@ -314,25 +333,37 @@ export default function HomePage() {
               </div>
             </section>
 
+            {/* -- Worry Box (moved above Extra XP) -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Worry Box</h2>
+                <Lock className="h-4 w-4 text-[#5A8AAF]" />
+              </div>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Put your worries in the box. Open them only with your therapist.</p>
+              <Button onClick={() => setShowWorryBox(true)} variant="outline" className="w-full rounded-xl border-[#2E8B57]/40 bg-transparent text-[#A8E6B0] hover:bg-[#2E8B57]/10">
+                <Package className="mr-2 h-4 w-4" /> Add a Worry
+              </Button>
+            </section>
+
             {/* -- Extra XP -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Extra XP</h2>
-                <div className="flex items-center gap-1 rounded-full bg-[#FFD700]/15 px-3 py-1">
-                  <Zap className="h-3.5 w-3.5 text-[#FFD700]" />
-                  <span className="text-xs font-bold text-[#FFD700]">{completedXp.reduce((sum, id) => sum + (extraXpItems.find(x => x.id === id)?.xp ?? 0), 0)} XP today</span>
+                <div className="flex items-center gap-1 rounded-full px-3 py-1" style={{ backgroundColor: `${currency.color}15` }}>
+                  <Zap className="h-3.5 w-3.5" style={{ color: currency.color }} />
+                  <span className="text-xs font-bold" style={{ color: currency.color }}>
+                    {completedXp.reduce((sum, id) => sum + (extraXpItems.find(x => x.id === id)?.xp ?? 0), 0)} {currency.name}
+                  </span>
                 </div>
               </div>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Earn bonus XP through extra activities beyond your daily quest.</p>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Earn bonus {currency.name} through extra activities beyond your daily quest.</p>
               <div className="flex flex-col gap-2">
                 {extraXpItems.map((item) => {
                   const done = completedXp.includes(item.id)
                   return (
                     <button
                       key={item.id}
-                      onClick={() => {
-                        if (!done) setCompletedXp((prev) => [...prev, item.id])
-                      }}
+                      onClick={() => { if (!done) setCompletedXp((prev) => [...prev, item.id]) }}
                       className={`flex items-center gap-3 rounded-2xl p-4 text-left transition-all ${done ? "bg-[#2E8B57]/15 ring-1 ring-[#2E8B57]/30" : "bg-[#1A2D42] hover:scale-[1.01] active:scale-[0.99]"}`}
                     >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: done ? "#2E8B5722" : `${item.color}22` }}>
@@ -343,7 +374,7 @@ export default function HomePage() {
                         <p className="text-xs text-[#8AA8C7]">{item.desc}</p>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${done ? "bg-[#2E8B57]/20 text-[#A8E6B0]" : "bg-[#FFD700]/15 text-[#FFD700]"}`}>
-                        {done ? "Done" : `+${item.xp} XP`}
+                        {done ? "Done" : `+${item.xp}`}
                       </span>
                     </button>
                   )
@@ -351,34 +382,32 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* -- Boosts -- */}
+            {/* -- Boosts (interactive XP activities with prompts + photo upload) -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Boosts</h2>
-                {activeBoost && (
-                  <span className="rounded-full bg-[#2E8B57]/15 px-3 py-1 text-xs font-bold text-[#A8E6B0]">
-                    Active: {boostCategories.find(b => b.id === activeBoost)?.label}
-                  </span>
-                )}
+                <span className="rounded-full bg-[#FFD700]/10 px-3 py-1 text-[10px] font-bold text-[#FFD700]">
+                  {completedBoosts.length}/{boostCategories.length} done
+                </span>
               </div>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Select a boost focus for today. Earn bonus XP in that category.</p>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Tap a boost for a quick XP activity. Complete the prompt and upload a photo.</p>
               <div className="grid grid-cols-4 gap-2">
                 {boostCategories.map((boost) => {
-                  const isActive = activeBoost === boost.id
+                  const done = completedBoosts.includes(boost.id)
                   return (
                     <button
                       key={boost.id}
-                      onClick={() => setActiveBoost(isActive ? null : boost.id)}
-                      className={`flex flex-col items-center gap-1.5 rounded-2xl p-3 transition-all ${isActive ? "scale-105 ring-2" : "hover:scale-105"}`}
-                      style={{
-                        backgroundColor: isActive ? `${boost.color}22` : "#1A2D42",
-                        ringColor: isActive ? boost.color : undefined,
-                      }}
+                      onClick={() => { if (!done) setShowBoostModal(boost) }}
+                      className={`flex flex-col items-center gap-1.5 rounded-2xl p-3 transition-all ${done ? "ring-2 ring-[#2E8B57]/50" : "hover:scale-105"}`}
+                      style={{ backgroundColor: done ? "#2E8B5722" : "#1A2D42" }}
                     >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${boost.color}22` }}>
-                        <boost.icon className="h-4.5 w-4.5" style={{ color: boost.color }} />
+                      <div className="relative flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: done ? "#2E8B5733" : `${boost.color}22` }}>
+                        {done
+                          ? <Check className="h-4 w-4 text-[#2E8B57]" />
+                          : <boost.icon className="h-4 w-4" style={{ color: boost.color }} />
+                        }
                       </div>
-                      <span className="text-[10px] font-bold leading-tight text-center text-white">{boost.label}</span>
+                      <span className={`text-[10px] font-bold leading-tight text-center ${done ? "text-[#A8E6B0]" : "text-white"}`}>{boost.label}</span>
                     </button>
                   )
                 })}
@@ -416,7 +445,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-bold text-[#A8E6B0]">Fuel logged for today</p>
-                    <p className="text-xs text-[#8AA8C7]">+15 XP earned</p>
+                    <p className="text-xs text-[#8AA8C7]">+15 {currency.name} earned</p>
                   </div>
                   <button
                     onClick={() => { setFuelStep("choice"); setShowFuelModal(true) }}
@@ -488,46 +517,6 @@ export default function HomePage() {
               </div>
             </section>
 
-            {/* -- Worry Box -- */}
-            <section className="rounded-3xl bg-[#13263A] p-5">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Worry Box</h2>
-                <Lock className="h-4 w-4 text-[#5A8AAF]" />
-              </div>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Put your worries in the box. Open them only with your therapist.</p>
-              <Button onClick={() => setShowWorryBox(true)} variant="outline" className="w-full rounded-xl border-[#2E8B57]/40 bg-transparent text-[#A8E6B0] hover:bg-[#2E8B57]/10">
-                <Package className="mr-2 h-4 w-4" /> Add a Worry
-              </Button>
-            </section>
-
-            {/* -- Quick Check-Ins -- */}
-            <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Quick Check-Ins</h2>
-              <div className="grid grid-cols-3 gap-2">
-                <button className="flex flex-col items-center gap-2 rounded-2xl bg-[#1A2D42] p-4 transition-transform hover:scale-105 active:scale-95">
-                  <Droplets className="h-6 w-6 text-[#1E90FF]" />
-                  <span className="text-xs font-bold text-[#8AA8C7]">Water?</span>
-                </button>
-                <button className="flex flex-col items-center gap-2 rounded-2xl bg-[#1A2D42] p-4 transition-transform hover:scale-105 active:scale-95">
-                  <StretchHorizontal className="h-6 w-6 text-[#FF9F43]" />
-                  <span className="text-xs font-bold text-[#8AA8C7]">Stretch?</span>
-                </button>
-                <button className="flex flex-col items-center gap-2 rounded-2xl bg-[#1A2D42] p-4 transition-transform hover:scale-105 active:scale-95">
-                  <Wind className="h-6 w-6 text-[#4ECDC4]" />
-                  <span className="text-xs font-bold text-[#8AA8C7]">Breath?</span>
-                </button>
-              </div>
-            </section>
-
-            {/* -- Scavenger Hunt -- */}
-            <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Scavenger Hunt</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Look around you and find something matching the prompt.</p>
-              <Button onClick={() => setShowScavengerHunt(true)} className="w-full rounded-xl bg-[#1E90FF] text-white hover:bg-[#1878D6]">
-                <Search className="mr-2 h-4 w-4" /> Start Hunt
-              </Button>
-            </section>
-
             {/* -- Meditation -- */}
             <section className="rounded-3xl bg-[#13263A] p-5">
               <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Meditation Break</h2>
@@ -544,45 +533,6 @@ export default function HomePage() {
               <Button onClick={() => setShowMilestone(true)} variant="outline" className="w-full rounded-xl border-[#FFD700]/40 bg-transparent text-[#FFD700] hover:bg-[#FFD700]/10">
                 <CalendarCheck className="mr-2 h-4 w-4" /> Check In
               </Button>
-            </section>
-
-            {/* -- Reminders -- */}
-            <section className="rounded-3xl bg-[#13263A] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Reminders</h2>
-              <p className="mb-3 text-sm text-[#8AA8C7]">Stay on track with scheduled prompts and task reminders.</p>
-              <Button onClick={() => setShowReminders(true)} variant="outline" className="w-full rounded-xl border-[#FF9F43]/40 bg-transparent text-[#FF9F43] hover:bg-[#FF9F43]/10">
-                <Bell className="mr-2 h-4 w-4" /> View Reminders
-              </Button>
-            </section>
-
-            {/* -- The Trigger -- */}
-            <section className="rounded-3xl bg-[#1A1014] p-5">
-              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#FF6B6B]">The Trigger</h2>
-              <p className="mb-3 text-sm text-[#CCA0A0]">Tornado, earthquake, or storm approaching? Use your skills.</p>
-              <Button onClick={() => setShowTrigger(true)} className="w-full rounded-xl bg-[#E84535] text-white hover:bg-[#C83525]">
-                <AlertTriangle className="mr-2 h-4 w-4" /> Face the Trigger
-              </Button>
-            </section>
-
-            {/* -- Current Adventure Link -- */}
-            <section>
-              <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Current Adventure</h2>
-              <Link href={activeAdventure.href} className={`group flex items-center gap-4 rounded-2xl bg-gradient-to-r ${activeAdventure.gradient} border ${activeAdventure.border} p-4 transition-transform hover:scale-[1.02] active:scale-[0.98]`}>
-                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${activeAdventure.iconBg}`}>
-                  <LandscapeIcon id={activeAdventure.id} />
-                </div>
-                <div className="flex flex-1 flex-col">
-                  <span className="text-lg font-extrabold text-white">{activeAdventure.name} Adventure</span>
-                  <span className={`text-sm ${activeAdventure.textColor}`}>{activeAdventure.tagline}</span>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/30">
-                      <div className="h-full rounded-full" style={{ width: "33%", backgroundColor: activeAdventure.accent }} />
-                    </div>
-                    <span className="text-xs font-bold text-white/70">Step 3/10</span>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-white/50" />
-              </Link>
             </section>
 
             {/* Schedule the Joy */}
@@ -606,6 +556,15 @@ export default function HomePage() {
                 ))}
               </div>
             </section>
+
+            {/* -- Reminders -- */}
+            <section className="rounded-3xl bg-[#13263A] p-5">
+              <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Reminders</h2>
+              <p className="mb-3 text-sm text-[#8AA8C7]">Stay on track with scheduled prompts and task reminders.</p>
+              <Button onClick={() => setShowReminders(true)} variant="outline" className="w-full rounded-xl border-[#FF9F43]/40 bg-transparent text-[#FF9F43] hover:bg-[#FF9F43]/10">
+                <Bell className="mr-2 h-4 w-4" /> View Reminders
+              </Button>
+            </section>
           </>
         ) : (
           /* -- Adventures Grid -- */
@@ -615,18 +574,27 @@ export default function HomePage() {
               <p className="mt-1 text-sm text-[#8AA8C7]">Each landscape is a new world to explore.</p>
             </section>
             <section className="flex flex-col gap-3">
-              {adventures.map((adv) => (
-                <Link key={adv.id} href={adv.href} className={`group flex items-center gap-4 rounded-2xl bg-gradient-to-r ${adv.gradient} border ${adv.border} p-4 transition-transform hover:scale-[1.02] active:scale-[0.98]`}>
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${adv.iconBg}`}>
-                    <LandscapeIcon id={adv.id} />
-                  </div>
-                  <div className="flex flex-1 flex-col">
-                    <span className="text-base font-bold text-white">{adv.name}</span>
-                    <span className={`text-sm ${adv.textColor}`}>{adv.tagline}</span>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 transition-transform group-hover:translate-x-1" />
-                </Link>
-              ))}
+              {adventures.map((adv) => {
+                const advCurrency = xpCurrencies[adv.id]
+                return (
+                  <Link key={adv.id} href={adv.href} className={`group flex items-center gap-4 rounded-2xl bg-gradient-to-r ${adv.gradient} border ${adv.border} p-4 transition-transform hover:scale-[1.02] active:scale-[0.98]`}>
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${adv.iconBg}`}>
+                      <LandscapeIcon id={adv.id} />
+                    </div>
+                    <div className="flex flex-1 flex-col">
+                      <span className="text-base font-bold text-white">{adv.name}</span>
+                      <span className={`text-sm ${adv.textColor}`}>{adv.tagline}</span>
+                    </div>
+                    {advCurrency && (
+                      <div className="flex items-center gap-1">
+                        {advCurrency.icon}
+                        <span className="text-xs font-bold" style={{ color: advCurrency.color }}>{advCurrency.name}</span>
+                      </div>
+                    )}
+                    <ChevronRight className="h-5 w-5 text-white/50 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                )
+              })}
             </section>
           </>
         )}
@@ -647,25 +615,15 @@ export default function HomePage() {
                 <DialogDescription className="text-center text-sm text-[#8AA8C7]">Fueling your body is part of the adventure. Let us know how your eating is going today.</DialogDescription>
               </DialogHeader>
               <div className="mt-5 flex flex-col gap-3">
-                <button
-                  onClick={() => setFuelStep("already-ate")}
-                  className="flex items-center gap-4 rounded-2xl bg-[#2E8B57]/15 p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ring-1 ring-[#2E8B57]/30"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#2E8B57]/20">
-                    <Check className="h-7 w-7 text-[#2E8B57]" />
-                  </div>
+                <button onClick={() => setFuelStep("already-ate")} className="flex items-center gap-4 rounded-2xl bg-[#2E8B57]/15 p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ring-1 ring-[#2E8B57]/30">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#2E8B57]/20"><Check className="h-7 w-7 text-[#2E8B57]" /></div>
                   <div>
                     <p className="text-base font-bold text-[#A8E6B0]">I already ate</p>
                     <p className="text-sm text-[#8AA8C7]">Record what you had with a photo</p>
                   </div>
                 </button>
-                <button
-                  onClick={() => setFuelStep("not-yet")}
-                  className="flex items-center gap-4 rounded-2xl bg-[#D4872C]/10 p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ring-1 ring-[#D4872C]/30"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#D4872C]/20">
-                    <Clock className="h-7 w-7 text-[#D4872C]" />
-                  </div>
+                <button onClick={() => setFuelStep("not-yet")} className="flex items-center gap-4 rounded-2xl bg-[#D4872C]/10 p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ring-1 ring-[#D4872C]/30">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#D4872C]/20"><Clock className="h-7 w-7 text-[#D4872C]" /></div>
                   <div>
                     <p className="text-base font-bold text-[#FFD699]">{"I haven't eaten yet"}</p>
                     <p className="text-sm text-[#8AA8C7]">Get meal ideas based on the time of day</p>
@@ -674,66 +632,39 @@ export default function HomePage() {
               </div>
             </>
           )}
-
           {fuelStep === "already-ate" && (
             <>
               <DialogHeader>
-                <button onClick={() => setFuelStep("choice")} className="mb-2 flex items-center gap-1 text-sm text-[#5A8AAF] transition-colors hover:text-white">
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </button>
+                <button onClick={() => setFuelStep("choice")} className="mb-2 flex items-center gap-1 text-sm text-[#5A8AAF] transition-colors hover:text-white"><ArrowLeft className="h-4 w-4" /> Back</button>
                 <DialogTitle className="text-xl font-bold text-white">Record Your Meal</DialogTitle>
-                <DialogDescription className="text-sm text-[#8AA8C7]">Take a photo of what you ate to log it. You earn +15 XP for fueling up.</DialogDescription>
+                <DialogDescription className="text-sm text-[#8AA8C7]">Take a photo of what you ate to log it. You earn +15 {currency.name}.</DialogDescription>
               </DialogHeader>
               <div className="mt-4 flex flex-col items-center gap-4">
                 <button className="group flex h-40 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#2E8B57]/40 bg-[#1A2D42] transition-all hover:border-[#2E8B57] hover:bg-[#2E8B57]/5">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2E8B57]/15 transition-transform group-hover:scale-110">
-                    <Camera className="h-8 w-8 text-[#2E8B57]" />
-                  </div>
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2E8B57]/15 transition-transform group-hover:scale-110"><Camera className="h-8 w-8 text-[#2E8B57]" /></div>
                   <span className="text-sm font-bold text-[#A8E6B0]">Tap to take a photo</span>
                   <span className="text-xs text-[#5A8AAF]">or upload from gallery</span>
                 </button>
-                <textarea
-                  placeholder="What did you eat? (optional)"
-                  className="min-h-20 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]"
-                />
-                <Button
-                  onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice") }}
-                  className="w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"
-                >
-                  <Check className="mr-2 h-4 w-4" /> Log Meal (+15 XP)
+                <textarea placeholder="What did you eat? (optional)" className="min-h-20 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]" />
+                <Button onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice") }} className="w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]">
+                  <Check className="mr-2 h-4 w-4" /> Log Meal (+15 {currency.name})
                 </Button>
               </div>
             </>
           )}
-
           {fuelStep === "not-yet" && (() => {
             const { mealTime, suggestions } = getMealSuggestions()
             return (
               <>
                 <DialogHeader>
-                  <button onClick={() => setFuelStep("choice")} className="mb-2 flex items-center gap-1 text-sm text-[#5A8AAF] transition-colors hover:text-white">
-                    <ArrowLeft className="h-4 w-4" /> Back
-                  </button>
-                  <DialogTitle className="text-xl font-bold text-white">
-                    <span className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-[#D4872C]" />
-                      {mealTime} Ideas
-                    </span>
-                  </DialogTitle>
-                  <DialogDescription className="text-sm text-[#8AA8C7]">
-                    {"It's"} {mealTime.toLowerCase()} time. Here are some ideas to get you fueled up.
-                  </DialogDescription>
+                  <button onClick={() => setFuelStep("choice")} className="mb-2 flex items-center gap-1 text-sm text-[#5A8AAF] transition-colors hover:text-white"><ArrowLeft className="h-4 w-4" /> Back</button>
+                  <DialogTitle className="text-xl font-bold text-white"><span className="flex items-center gap-2"><Clock className="h-5 w-5 text-[#D4872C]" />{mealTime} Ideas</span></DialogTitle>
+                  <DialogDescription className="text-sm text-[#8AA8C7]">{"It's"} {mealTime.toLowerCase()} time. Here are some ideas to get you fueled up.</DialogDescription>
                 </DialogHeader>
                 <div className="mt-4 flex flex-col gap-2">
                   {suggestions.map((s) => (
-                    <button
-                      key={s.name}
-                      onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice") }}
-                      className="flex items-start gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D4872C]/15">
-                        <UtensilsCrossed className="h-5 w-5 text-[#D4872C]" />
-                      </div>
+                    <button key={s.name} onClick={() => { setFuelDone(true); setShowFuelModal(false); setFuelStep("choice") }} className="flex items-start gap-3 rounded-2xl bg-[#1A2D42] p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D4872C]/15"><UtensilsCrossed className="h-5 w-5 text-[#D4872C]" /></div>
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">{s.name}</p>
                         <p className="mt-0.5 text-xs leading-relaxed text-[#8AA8C7]">{s.desc}</p>
@@ -757,9 +688,7 @@ export default function HomePage() {
             <DialogDescription className="text-sm text-[#8AA8C7]">Write it down and lock it away. Open it with your therapist.</DialogDescription>
           </DialogHeader>
           <textarea value={worryText} onChange={(e) => setWorryText(e.target.value)} placeholder="What is worrying you?" className="mt-3 min-h-28 w-full rounded-xl border-0 bg-[#1A2D42] p-4 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]" />
-          <Button onClick={() => { setWorryText(""); setShowWorryBox(false) }} className="mt-3 w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]">
-            <Lock className="mr-2 h-4 w-4" /> Lock it Away
-          </Button>
+          <Button onClick={() => { setWorryText(""); setShowWorryBox(false) }} className="mt-3 w-full rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Lock className="mr-2 h-4 w-4" /> Lock it Away</Button>
         </DialogContent>
       </Dialog>
 
@@ -778,9 +707,7 @@ export default function HomePage() {
               <div className={`flex h-28 w-28 items-center justify-center rounded-full transition-all duration-1000 ${breathCount % 2 === 0 ? "scale-100 bg-[#4ECDC4]/20" : "scale-125 bg-[#4ECDC4]/40"}`}>
                 <span className="text-2xl font-bold text-[#4ECDC4]">{breathCount % 2 === 0 ? "Breathe In" : "Breathe Out"}</span>
               </div>
-              <Button onClick={() => setBreathCount((c) => c + 1)} className="rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]">
-                <Wind className="mr-2 h-4 w-4" /> {breathCount === 0 ? "Start" : "Next Breath"} ({breathCount}/6)
-              </Button>
+              <Button onClick={() => setBreathCount((c) => c + 1)} className="rounded-xl bg-[#4ECDC4] text-white hover:bg-[#3DBDB5]"><Wind className="mr-2 h-4 w-4" /> {breathCount === 0 ? "Start" : "Next Breath"} ({breathCount}/6)</Button>
             </div>
           )}
           {showRoadblock?.id === "stretch" && (
@@ -795,11 +722,9 @@ export default function HomePage() {
           )}
           {showRoadblock?.id === "water" && (
             <div className="mt-4 flex flex-col items-center gap-3">
-              <Droplets className="h-16 w-16 text-[#1E90FF]" />
+              <Heart className="h-16 w-16 text-[#1E90FF]" />
               <p className="text-base font-bold text-white">Go drink a glass of water right now!</p>
-              <Button onClick={() => setShowRoadblock(null)} className="rounded-xl bg-[#1E90FF] text-white hover:bg-[#1878D6]">
-                <Heart className="mr-2 h-4 w-4" /> Done!
-              </Button>
+              <Button onClick={() => setShowRoadblock(null)} className="rounded-xl bg-[#1E90FF] text-white hover:bg-[#1878D6]"><Heart className="mr-2 h-4 w-4" /> Done!</Button>
             </div>
           )}
         </DialogContent>
@@ -820,18 +745,6 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Scavenger Hunt Modal */}
-      <Dialog open={showScavengerHunt} onOpenChange={setShowScavengerHunt}>
-        <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6 text-center">
-          <DialogHeader className="flex flex-col items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1E90FF]/20"><Search className="h-8 w-8 text-[#1E90FF]" /></div>
-            <DialogTitle className="text-xl font-bold text-white">Scavenger Hunt</DialogTitle>
-            <DialogDescription className="text-sm text-[#8AA8C7]">Find something BLUE around you and take a photo!</DialogDescription>
-          </DialogHeader>
-          <Button className="mt-4 w-full rounded-xl bg-[#1E90FF] text-white hover:bg-[#1878D6]"><Camera className="mr-2 h-4 w-4" /> Upload Photo</Button>
-        </DialogContent>
-      </Dialog>
-
       {/* Meditation Modal */}
       <Dialog open={showMeditation} onOpenChange={setShowMeditation}>
         <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6">
@@ -842,9 +755,7 @@ export default function HomePage() {
           <div className="mt-3 grid grid-cols-3 gap-2">
             {meditationCharacters.map((c) => (
               <button key={c.id} onClick={() => setSelectedMedChar(c.id)} className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${selectedMedChar === c.id ? "scale-105 ring-2" : "hover:scale-105"}`} style={{ backgroundColor: selectedMedChar === c.id ? `${c.color}22` : "#1A2D42", borderColor: selectedMedChar === c.id ? c.color : "transparent" }}>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: `${c.color}33` }}>
-                  <Sparkles className="h-5 w-5" style={{ color: c.color }} />
-                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: `${c.color}33` }}><Sparkles className="h-5 w-5" style={{ color: c.color }} /></div>
                 <span className="text-[10px] font-bold text-white">{c.label}</span>
               </button>
             ))}
@@ -874,56 +785,93 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Trigger Modal */}
-      <Dialog open={showTrigger} onOpenChange={setShowTrigger}>
-        <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#4A1A1A] bg-[#1A1014] p-6 text-center">
-          <DialogHeader className="flex flex-col items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E84535]/20"><AlertTriangle className="h-8 w-8 text-[#E84535]" /></div>
-            <DialogTitle className="text-xl font-bold text-white">The Trigger</DialogTitle>
-            <DialogDescription className="text-sm text-[#CCA0A0]">A storm is approaching. Use your skills to stay grounded.</DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex flex-col gap-2">
-            {["Deep Breathing", "Call a Safe Person", "Ground Yourself (5-4-3-2-1)", "Move Your Body"].map((skill) => (
-              <button key={skill} className="rounded-xl bg-[#2A1A1A] p-3 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]">{skill}</button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Leaderboard Modal */}
+      {/* Leaderboard + Friend Connection Modal */}
       <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
         <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-white"><Trophy className="h-5 w-5 text-[#FFD700]" /> Leaderboard</DialogTitle>
-            <DialogDescription className="text-sm text-[#8AA8C7]">Ranked by coins earned across all quests.</DialogDescription>
+            <DialogDescription className="text-sm text-[#8AA8C7]">Ranked by XP. See where everyone is on their adventure.</DialogDescription>
           </DialogHeader>
           <div className="mt-3 flex flex-col gap-2">
-            {[...leaderboard].sort((a, b) => a.rank - b.rank).map((p, i) => (
-              <div key={p.name} className={`flex items-center gap-3 rounded-2xl p-3 ${p.name === "You" ? "bg-[#2E8B57]/20 ring-1 ring-[#2E8B57]/40" : "bg-[#1A2D42]"}`}>
-                <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${i === 0 ? "bg-[#FFD700]/20 text-[#FFD700]" : i === 1 ? "bg-[#C0C0C0]/20 text-[#C0C0C0]" : i === 2 ? "bg-[#CD7F32]/20 text-[#CD7F32]" : "bg-[#1A2D42] text-[#5A8AAF]"}`}>
-                  {p.rank}
-                </span>
-                <span className={`flex-1 text-sm font-bold ${p.name === "You" ? "text-[#A8E6B0]" : "text-white"}`}>{p.name}</span>
-                <div className="flex items-center gap-1">
-                  <Coins className="h-4 w-4 text-[#FFD700]" />
-                  <span className="text-sm font-bold text-[#FFD700]">{p.coins}</span>
+            {[...leaderboard].sort((a, b) => a.rank - b.rank).map((p, i) => {
+              const pCurrency = xpCurrencies[p.adventure]
+              return (
+                <div key={p.name} className={`flex items-center gap-3 rounded-2xl p-3 ${p.name === "You" ? "bg-[#2E8B57]/20 ring-1 ring-[#2E8B57]/40" : "bg-[#1A2D42]"}`}>
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${i === 0 ? "bg-[#FFD700]/20 text-[#FFD700]" : i === 1 ? "bg-[#C0C0C0]/20 text-[#C0C0C0]" : i === 2 ? "bg-[#CD7F32]/20 text-[#CD7F32]" : "bg-[#1A2D42] text-[#5A8AAF]"}`}>
+                    {p.rank}
+                  </span>
+                  <div className="flex flex-1 flex-col">
+                    <span className={`text-sm font-bold ${p.name === "You" ? "text-[#A8E6B0]" : "text-white"}`}>{p.name}</span>
+                    <span className="text-[10px] capitalize text-[#5A8AAF]">{p.adventure} adventure</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {pCurrency?.icon}
+                    <span className="text-sm font-bold" style={{ color: pCurrency?.color }}>{p.xp}</span>
+                  </div>
+                  {p.name !== "You" && (
+                    <button className="rounded-full bg-[#2E8B57]/20 p-1.5 transition-colors hover:bg-[#2E8B57]/30" aria-label={`Send message to ${p.name}`}>
+                      <MessageCircle className="h-3.5 w-3.5 text-[#A8E6B0]" />
+                    </button>
+                  )}
                 </div>
-                {p.name !== "You" && (
-                  <button className="rounded-full bg-[#2E8B57]/20 px-2.5 py-1 text-[10px] font-bold text-[#A8E6B0] transition-colors hover:bg-[#2E8B57]/30">
-                    <MessageCircle className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
-          <div className="mt-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Quick Cheer</p>
-            <div className="flex flex-wrap gap-1.5">
+          {/* Friend Connection integrated here */}
+          <div className="mt-4 rounded-2xl bg-[#1A2D42] p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Users className="h-4 w-4 text-[#2E8B57]" />
+              <span className="text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Friend Connection</span>
+            </div>
+            <p className="mb-3 text-xs text-[#8AA8C7]">Send encouragement to fellow adventurers.</p>
+            <div className="mb-3 flex flex-wrap gap-1.5">
               {quickMessages.map((m) => (
-                <button key={m} className="rounded-full bg-[#1A2D42] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#2E8B57]/20">{m}</button>
+                <button key={m} className="rounded-full bg-[#0C1B2A] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#2E8B57]/20">{m}</button>
               ))}
             </div>
+            <div className="flex gap-2">
+              <input value={friendMsg} onChange={(e) => setFriendMsg(e.target.value)} placeholder="Write a message..." className="flex-1 rounded-xl border-0 bg-[#0C1B2A] px-4 py-2.5 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]" />
+              <Button onClick={() => setFriendMsg("")} className="rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Send className="h-4 w-4" /></Button>
+            </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Boost Activity Modal */}
+      <Dialog open={!!showBoostModal} onOpenChange={() => setShowBoostModal(null)}>
+        <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6">
+          {showBoostModal && (
+            <>
+              <DialogHeader className="flex flex-col items-center gap-3">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl" style={{ backgroundColor: `${showBoostModal.color}22` }}>
+                  <showBoostModal.icon className="h-8 w-8" style={{ color: showBoostModal.color }} />
+                </div>
+                <DialogTitle className="text-xl font-bold text-white">{showBoostModal.label} Boost</DialogTitle>
+                <DialogDescription className="text-center text-sm text-[#8AA8C7]">Complete one of these prompts and upload a photo for +20 {currency.name}.</DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 flex flex-col gap-2">
+                {showBoostModal.prompts.map((prompt, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-2xl bg-[#1A2D42] p-4">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ backgroundColor: `${showBoostModal.color}22`, color: showBoostModal.color }}>{i + 1}</span>
+                    <span className="flex-1 text-sm text-white">{prompt}</span>
+                  </div>
+                ))}
+              </div>
+              <button className="group mt-4 flex h-32 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-[#1A2D42] transition-all hover:bg-[#243B55]" style={{ borderColor: `${showBoostModal.color}40` }}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110" style={{ backgroundColor: `${showBoostModal.color}15` }}>
+                  <Camera className="h-6 w-6" style={{ color: showBoostModal.color }} />
+                </div>
+                <span className="text-sm font-bold" style={{ color: showBoostModal.color }}>Upload Photo Proof</span>
+              </button>
+              <Button
+                onClick={() => { setCompletedBoosts((prev) => [...prev, showBoostModal.id]); setShowBoostModal(null) }}
+                className="mt-3 w-full rounded-xl text-white"
+                style={{ backgroundColor: showBoostModal.color }}
+              >
+                <Check className="mr-2 h-4 w-4" /> Complete Boost (+20 {currency.name})
+              </Button>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -987,37 +935,6 @@ export default function HomePage() {
             ))}
           </div>
           <Button className="mt-3 w-full rounded-xl bg-[#D4872C] text-white hover:bg-[#B8711E]"><Camera className="mr-2 h-4 w-4" /> Upload Meal Photo</Button>
-        </DialogContent>
-      </Dialog>
-
-      {/* Friend Connection Modal */}
-      <Dialog open={showFriendConnect} onOpenChange={setShowFriendConnect}>
-        <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#2A3E55] bg-[#13263A] p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-white"><Users className="h-5 w-5 text-[#2E8B57]" /> Friend Connection</DialogTitle>
-            <DialogDescription className="text-sm text-[#8AA8C7]">Send encouragement to fellow adventurers on the leaderboard.</DialogDescription>
-          </DialogHeader>
-          <div className="mt-3 flex flex-col gap-2">
-            {leaderboard.filter((p) => p.name !== "You").map((p) => (
-              <div key={p.name} className="flex items-center gap-3 rounded-2xl bg-[#1A2D42] p-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2E8B57]/20 text-xs font-bold text-[#A8E6B0]">{p.name.charAt(0)}</div>
-                <span className="flex-1 text-sm font-bold text-white">{p.name}</span>
-                <span className="text-xs text-[#5A8AAF]">#{p.rank}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#5A8AAF]">Quick Emotes</p>
-            <div className="flex flex-wrap gap-1.5">
-              {quickMessages.map((m) => (
-                <button key={m} className="rounded-full bg-[#1A2D42] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#2E8B57]/20">{m}</button>
-              ))}
-            </div>
-          </div>
-          <div className="mt-3 flex gap-2">
-            <input value={friendMsg} onChange={(e) => setFriendMsg(e.target.value)} placeholder="Write a message..." className="flex-1 rounded-xl border-0 bg-[#1A2D42] px-4 py-2.5 text-sm text-white placeholder:text-[#5A8AAF] focus:outline-none focus:ring-2 focus:ring-[#2E8B57]" />
-            <Button onClick={() => setFriendMsg("")} className="rounded-xl bg-[#2E8B57] text-white hover:bg-[#24734A]"><Send className="h-4 w-4" /></Button>
-          </div>
         </DialogContent>
       </Dialog>
 

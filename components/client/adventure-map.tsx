@@ -2,10 +2,23 @@
 
 import { useState } from "react"
 import {
-  Camera, ArrowLeft, Coins, Mic, Pause, Flame, Wind,
+  Camera, ArrowLeft, Mic, Pause, Flame, Wind,
   Brain, Trash2, Gem, AlertTriangle, ChevronUp, Star, Lock,
   Shirt, Palette, Zap, BookOpen, Map, Ghost, Trophy, Sparkles
 } from "lucide-react"
+
+/* -- XP currency per adventure (matches home page) -- */
+const xpCurrencies: Record<string, { name: string; emoji: string; color: string }> = {
+  Jungle:     { name: "Bananas",    emoji: "\u{1F34C}", color: "#FFD700" },
+  Savannah:   { name: "Acorns",     emoji: "\u{1F330}", color: "#D4872C" },
+  Ocean:      { name: "Sea Shells", emoji: "\u{1F41A}", color: "#1E90FF" },
+  Desert:     { name: "Scarabs",    emoji: "\u{1FAB2}", color: "#E8A435" },
+  Mountains:  { name: "Crystals",   emoji: "\u{1F48E}", color: "#7F9BAA" },
+  Antarctica: { name: "Snowflakes", emoji: "\u{2744}\u{FE0F}",  color: "#89CFF0" },
+  Volcano:    { name: "Embers",     emoji: "\u{1F525}", color: "#E84535" },
+  City:       { name: "Tokens",     emoji: "\u{1FA99}", color: "#8080FF" },
+  Atlantis:   { name: "Pearls",     emoji: "\u{1FAE7}", color: "#00CED1" },
+}
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -119,8 +132,10 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
   const [breathCount, setBreathCount] = useState(0)
   const [monsterSize, setMonsterSize] = useState(100) // shrinks as user works through it
   const [movementTier] = useState(0)
+  const [triggerActive, setTriggerActive] = useState(false)
   const fuelLevel = 65
-  const coins = 240
+  const xp = 240
+  const cur = xpCurrencies[theme.name] ?? { name: "XP", emoji: "\u{2B50}", color: "#FFD700" }
 
   const activeVehicle = theme.vehicles.find((v) => v.id === selectedVehicle) ?? theme.vehicles[0]
   const activeCharacter = theme.characters.find((c) => c.id === selectedCharacter) ?? theme.characters[0]
@@ -129,6 +144,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
     if (step.id > currentStep) return
     if (step.type === "fork") { setShowForkPicker(true); return }
     if (step.type === "reward") { setShowRewardCelebration(true); return }
+    if (step.type === "trigger") setTriggerActive(true)
     setSelectedStep(step)
   }
 
@@ -149,6 +165,50 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
       <div className="fixed inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${theme.bgImage})` }} aria-hidden="true" />
       <div className="fixed inset-0" aria-hidden="true" style={{ background: `linear-gradient(to bottom, ${theme.overlayFrom}, ${theme.overlayVia}, ${theme.overlayTo})` }} />
 
+      {/* Snowstorm trigger effect */}
+      {triggerActive && (
+        <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
+          {/* Darkened sky */}
+          <div className="absolute inset-0 bg-[#1a1030]/60 animate-pulse" style={{ animationDuration: "3s" }} />
+          {/* Snow particles */}
+          {Array.from({ length: 60 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: `${2 + Math.random() * 4}px`,
+                height: `${2 + Math.random() * 4}px`,
+                left: `${Math.random() * 100}%`,
+                top: `-${Math.random() * 20}%`,
+                opacity: 0.5 + Math.random() * 0.5,
+                animation: `snowfall ${2 + Math.random() * 4}s linear ${Math.random() * 2}s infinite`,
+              }}
+            />
+          ))}
+          {/* Wind streaks */}
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div
+              key={`w${i}`}
+              className="absolute h-px bg-white/30"
+              style={{
+                width: `${30 + Math.random() * 60}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                transform: "rotate(-25deg)",
+                animation: `windStreak ${1 + Math.random() * 2}s linear ${Math.random() * 2}s infinite`,
+              }}
+            />
+          ))}
+          {/* Warning banner */}
+          <div className="absolute inset-x-0 top-20 flex justify-center">
+            <div className="flex items-center gap-2 rounded-full bg-[#E84535]/90 px-5 py-2.5 shadow-2xl backdrop-blur-sm animate-bounce" style={{ animationDuration: "2s" }}>
+              <AlertTriangle className="h-5 w-5 text-white" />
+              <span className="text-sm font-bold text-white">Storm Approaching!</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="relative z-10 flex h-full flex-col">
         {/* -- Top Bar -- */}
         <header className="flex shrink-0 items-center gap-3 px-4 pt-4 pb-2">
@@ -162,9 +222,9 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
           <button onClick={() => setShowUpgradeShop(true)} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 backdrop-blur-md" aria-label="Upgrade shop">
             <Zap className="h-4 w-4 text-[#FFD700]" />
           </button>
-          <div className="flex items-center gap-1.5 rounded-full bg-black/20 px-3 py-1.5 backdrop-blur-md">
-            <Coins className="h-4 w-4 text-[#FFD700]" />
-            <span className="text-sm font-bold text-[#FFD700]">{coins}</span>
+          <div className="flex items-center gap-1.5 rounded-full bg-black/20 px-3 py-1.5 backdrop-blur-md" style={{ borderLeft: `2px solid ${cur.color}` }}>
+            <span className="text-sm leading-none">{cur.emoji}</span>
+            <span className="text-sm font-bold" style={{ color: cur.color }}>{xp}</span>
           </div>
         </header>
 
@@ -324,15 +384,15 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                       <div className="flex flex-col items-center gap-2">
                         <Sparkles className="h-8 w-8 text-[#FFD700]" />
                         <p className="text-sm font-bold text-[#FFD700]">You defeated the scary monster!</p>
-                        <p className="text-xs text-[#CCA0A0]">+25 coins earned</p>
+                        <p className="text-xs text-[#CCA0A0]">+25 {cur.name} earned</p>
                       </div>
                     )}
                   </div>
                 </DialogContent>
               </Dialog>
 
-              {/* -- Trigger Modal -- */}
-              <Dialog open={!!selectedStep && selectedStep.type === "trigger"} onOpenChange={() => setSelectedStep(null)}>
+              {/* -- Trigger Modal (with snowstorm) -- */}
+              <Dialog open={!!selectedStep && selectedStep.type === "trigger"} onOpenChange={() => { setSelectedStep(null); setTriggerActive(false) }}>
                 <DialogContent className="mx-auto max-w-sm rounded-3xl border-[#4A1A1A] bg-[#1A1014] p-6 text-center">
                   <DialogHeader className="flex flex-col items-center gap-3">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E84535]/20"><AlertTriangle className="h-8 w-8 text-[#E84535]" /></div>
@@ -341,7 +401,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                   </DialogHeader>
                   <div className="mt-4 flex flex-col gap-2">
                     {["Deep Breathing", "Call a Safe Person", "Ground Yourself (5-4-3-2-1)", "Move Your Body"].map((skill) => (
-                      <button key={skill} className="rounded-xl bg-[#2A1A1A] p-3 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]">{skill}</button>
+                      <button key={skill} onClick={() => { setSelectedStep(null); setTriggerActive(false) }} className="rounded-xl bg-[#2A1A1A] p-3 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]">{skill}</button>
                     ))}
                   </div>
                 </DialogContent>
@@ -373,7 +433,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                     <DialogDescription className="text-base" style={{ color: theme.textMid }}>Amazing work! You completed this section of your adventure.</DialogDescription>
                   </DialogHeader>
                   <div className="mt-4 flex flex-col items-center gap-3">
-                    <div className="flex items-center gap-2"><Coins className="h-6 w-6 text-[#FFD700]" /><span className="text-3xl font-bold text-[#FFD700]">+50</span></div>
+                    <div className="flex items-center gap-2"><span className="text-3xl">{cur.emoji}</span><span className="text-3xl font-bold" style={{ color: cur.color }}>+50 {cur.name}</span></div>
                     <div className="flex flex-wrap justify-center gap-2 mt-2">
                       {["Great job completing your quests!", "You faced fears and won!", "Your consistency is impressive!", "Keep this momentum going!"].map((msg) => (
                         <span key={msg} className="rounded-full px-3 py-1.5 text-xs font-bold" style={{ backgroundColor: `${theme.primaryColor}15`, color: theme.primaryColor }}>{msg}</span>
@@ -457,7 +517,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                 <DialogContent className="mx-auto max-w-sm rounded-3xl border-0 p-6" style={{ backgroundColor: theme.cardBg }}>
                   <DialogHeader>
                     <DialogTitle className="text-xl font-bold" style={{ color: theme.textDark }}>Upgrade Shop</DialogTitle>
-                    <DialogDescription style={{ color: theme.textMid }}>Spend coins on upgrades!</DialogDescription>
+                    <DialogDescription style={{ color: theme.textMid }}>Spend {cur.name} on upgrades!</DialogDescription>
                   </DialogHeader>
                   <div className="mt-4 flex flex-col gap-2">
                     {upgradeItems.map((u) => (
@@ -468,7 +528,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                         <div className="flex-1">
                           <p className="text-sm font-bold" style={{ color: theme.textDark }}>{u.label}</p>
                         </div>
-                        <div className="flex items-center gap-1"><Coins className="h-4 w-4 text-[#FFD700]" /><span className="text-sm font-bold text-[#FFD700]">{u.cost}</span></div>
+                        <div className="flex items-center gap-1"><span className="text-sm">{cur.emoji}</span><span className="text-sm font-bold" style={{ color: cur.color }}>{u.cost}</span></div>
                       </button>
                     ))}
                   </div>

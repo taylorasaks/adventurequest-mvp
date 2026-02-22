@@ -88,3 +88,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Snowstorm trigger effect */
+@keyframes snowfall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(-40px) rotate(360deg);
+    opacity: 0.3;
+  }
+}
+
+@keyframes windStreak {
+  0% {
+    transform: translateX(0) rotate(-25deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(-150px) rotate(-25deg);
+    opacity: 0;
+  }
+}
