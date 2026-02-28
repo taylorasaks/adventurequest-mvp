@@ -1,17 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import { Nunito, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-
-const nunito = Nunito({
-  subsets: ['latin'],
-  variable: '--font-nunito',
-})
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-})
 
 export const metadata: Metadata = {
   title: 'Pulse - Become an Explorer Outside the App',
@@ -31,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${nunito.variable} ${inter.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         {children}
         <Analytics />
       </body>
