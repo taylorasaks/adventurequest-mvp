@@ -192,6 +192,11 @@ function getNodeColor(stepId: number, cs: number, theme: AdventureTheme) {
   return theme.lockedNodeColor
 }
 
+function seededValue(seed: number) {
+  const x = Math.sin(seed * 9999) * 10000
+  return x - Math.floor(x)
+}
+
 function getSpecialRing(type: string) {
   switch (type) {
     case "roadblock": return "#4ECDC4"
@@ -260,34 +265,52 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
           {/* Darkened sky */}
           <div className="absolute inset-0 bg-[#1a1030]/60 animate-pulse" style={{ animationDuration: "3s" }} />
           {/* Snow particles */}
-          {Array.from({ length: 60 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full bg-white"
-              style={{
-                width: `${2 + Math.random() * 4}px`,
-                height: `${2 + Math.random() * 4}px`,
-                left: `${Math.random() * 100}%`,
-                top: `-${Math.random() * 20}%`,
-                opacity: 0.5 + Math.random() * 0.5,
-                animation: `snowfall ${2 + Math.random() * 4}s linear ${Math.random() * 2}s infinite`,
-              }}
-            />
-          ))}
+          {Array.from({ length: 60 }).map((_, i) => {
+            const widthRand = seededValue(i + 1)
+            const heightRand = seededValue(i + 101)
+            const leftRand = seededValue(i + 201)
+            const topRand = seededValue(i + 301)
+            const opacityRand = seededValue(i + 401)
+            const durationRand = seededValue(i + 501)
+            const delayRand = seededValue(i + 601)
+
+            return (
+              <div
+                key={i}
+                className="absolute rounded-full bg-white"
+                style={{
+                  width: `${2 + widthRand * 4}px`,
+                  height: `${2 + heightRand * 4}px`,
+                  left: `${leftRand * 100}%`,
+                  top: `-${topRand * 20}%`,
+                  opacity: 0.5 + opacityRand * 0.5,
+                  animation: `snowfall ${2 + durationRand * 4}s linear ${delayRand * 2}s infinite`,
+                }}
+              />
+            )
+          })}
           {/* Wind streaks */}
-          {Array.from({ length: 15 }).map((_, i) => (
-            <div
-              key={`w${i}`}
-              className="absolute h-px bg-white/30"
-              style={{
-                width: `${30 + Math.random() * 60}px`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                transform: "rotate(-25deg)",
-                animation: `windStreak ${1 + Math.random() * 2}s linear ${Math.random() * 2}s infinite`,
-              }}
-            />
-          ))}
+          {Array.from({ length: 15 }).map((_, i) => {
+            const widthRand = seededValue(i + 701)
+            const leftRand = seededValue(i + 801)
+            const topRand = seededValue(i + 901)
+            const durationRand = seededValue(i + 1001)
+            const delayRand = seededValue(i + 1101)
+
+            return (
+              <div
+                key={`w${i}`}
+                className="absolute h-px bg-white/30"
+                style={{
+                  width: `${30 + widthRand * 60}px`,
+                  left: `${leftRand * 100}%`,
+                  top: `${topRand * 100}%`,
+                  transform: "rotate(-25deg)",
+                  animation: `windStreak ${1 + durationRand * 2}s linear ${delayRand * 2}s infinite`,
+                }}
+              />
+            )
+          })}
           {/* Warning banner */}
           <div className="absolute inset-x-0 top-20 flex justify-center">
             <div className="flex items-center gap-2 rounded-full bg-[#E84535]/90 px-5 py-2.5 shadow-2xl backdrop-blur-sm animate-bounce" style={{ animationDuration: "2s" }}>
@@ -371,8 +394,13 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                           className={`flex h-20 w-20 flex-col items-center justify-center rounded-full transition-all ${isLocked ? "cursor-not-allowed opacity-50" : ""} ${isCurrent ? "animate-pulse" : ""} ${isSpecial && !isLocked ? "ring-2 ring-offset-2 ring-offset-transparent" : ""}`}
                           style={{
                             backgroundColor: nodeColor,
-                            boxShadow: isCurrent ? `0 0 0 6px ${nodeColor}44, 0 0 30px ${nodeColor}33` : isCompleted ? `0 0 0 4px ${nodeColor}33` : "0 4px 12px rgba(0,0,0,.12)",
-                            ringColor: isSpecial && !isLocked ? getSpecialRing(step.type) : "transparent",
+                            boxShadow: isSpecial && !isLocked
+                              ? `0 0 0 3px ${getSpecialRing(step.type)}, ${isCurrent ? `0 0 0 6px ${nodeColor}44, 0 0 30px ${nodeColor}33` : isCompleted ? `0 0 0 4px ${nodeColor}33` : "0 4px 12px rgba(0,0,0,.12)"}`
+                              : isCurrent
+                                ? `0 0 0 6px ${nodeColor}44, 0 0 30px ${nodeColor}33`
+                                : isCompleted
+                                  ? `0 0 0 4px ${nodeColor}33`
+                                  : "0 4px 12px rgba(0,0,0,.12)",
                           }}
                           aria-label={`${step.title} - ${isCompleted ? "completed" : isCurrent ? "current" : "locked"}`}
                         >
@@ -551,7 +579,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                   </DialogHeader>
                   <div className="mt-4 grid grid-cols-3 gap-3">
                     {theme.vehicles.map((v) => (
-                      <button key={v.id} onClick={() => { setSelectedVehicle(v.id); setShowVehiclePicker(false) }} className={`flex flex-col items-center gap-2 rounded-2xl p-4 transition-all ${selectedVehicle === v.id ? "ring-2 scale-105" : "hover:scale-105"}`} style={{ backgroundColor: selectedVehicle === v.id ? `${theme.primaryColor}22` : `${theme.primaryColor}08`, ringColor: selectedVehicle === v.id ? theme.primaryColor : "transparent" }}>
+                      <button key={v.id} onClick={() => { setSelectedVehicle(v.id); setShowVehiclePicker(false) }} className={`flex flex-col items-center gap-2 rounded-2xl p-4 transition-all ${selectedVehicle === v.id ? "ring-2 scale-105" : "hover:scale-105"}`} style={{ backgroundColor: selectedVehicle === v.id ? `${theme.primaryColor}22` : `${theme.primaryColor}08`, boxShadow: selectedVehicle === v.id ? `0 0 0 2px ${theme.primaryColor}` : 'none' }}>
                         <div className="flex h-12 w-12 items-center justify-center">{v.icon}</div>
                         <span className="text-xs font-bold" style={{ color: theme.textDark }}>{v.label}</span>
                       </button>
@@ -570,7 +598,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                   <p className="mt-3 text-xs font-bold uppercase tracking-widest" style={{ color: theme.textMid }}>Animal Companions</p>
                   <div className="mt-2 grid grid-cols-3 gap-3">
                     {theme.characters.map((c) => (
-                      <button key={c.id} onClick={() => { setSelectedCharacter(c.id); setShowCharacterPicker(false) }} className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${selectedCharacter === c.id ? "ring-2 scale-105" : "hover:scale-105"}`} style={{ backgroundColor: selectedCharacter === c.id ? `${theme.primaryColor}22` : `${theme.primaryColor}08`, ringColor: selectedCharacter === c.id ? theme.primaryColor : "transparent" }}>
+                      <button key={c.id} onClick={() => { setSelectedCharacter(c.id); setShowCharacterPicker(false) }} className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${selectedCharacter === c.id ? "ring-2 scale-105" : "hover:scale-105"}`} style={{ backgroundColor: selectedCharacter === c.id ? `${theme.primaryColor}22` : `${theme.primaryColor}08`, boxShadow: selectedCharacter === c.id ? `0 0 0 2px ${theme.primaryColor}` : 'none' }}>
                         <div className="flex h-10 w-10 items-center justify-center">{c.icon}</div>
                         <span className="text-[10px] font-bold" style={{ color: theme.textDark }}>{c.label}</span>
                       </button>
@@ -579,7 +607,7 @@ export function AdventureMap({ theme }: { theme: AdventureTheme }) {
                   <p className="mt-4 text-xs font-bold uppercase tracking-widest" style={{ color: theme.textMid }}>Human Characters</p>
                   <div className="mt-2 grid grid-cols-3 gap-3">
                     {humanCharacters.map((c) => (
-                      <button key={c.id} onClick={() => { setSelectedCharacter(c.id); setShowCharacterPicker(false) }} className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${selectedCharacter === c.id ? "ring-2 scale-105" : "hover:scale-105"}`} style={{ backgroundColor: selectedCharacter === c.id ? `${theme.primaryColor}22` : `${theme.primaryColor}08`, ringColor: selectedCharacter === c.id ? theme.primaryColor : "transparent" }}>
+                      <button key={c.id} onClick={() => { setSelectedCharacter(c.id); setShowCharacterPicker(false) }} className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition-all ${selectedCharacter === c.id ? "ring-2 scale-105" : "hover:scale-105"}`} style={{ backgroundColor: selectedCharacter === c.id ? `${theme.primaryColor}22` : `${theme.primaryColor}08`, boxShadow: selectedCharacter === c.id ? `0 0 0 2px ${theme.primaryColor}` : 'none' }}>
                         <div className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold" style={{ backgroundColor: `${theme.primaryColor}20`, color: theme.primaryColor }}>{c.label.charAt(0)}</div>
                         <span className="text-[10px] font-bold" style={{ color: theme.textDark }}>{c.label}</span>
                       </button>
